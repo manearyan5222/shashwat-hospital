@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { departmentsData } from "@/data/departments";
 import { doctorsData, Doctor } from "@/data/doctors";
 import { hospitalData } from "@/data/hospital";
+import { isVerified } from "@/lib/verify";
 import {
   Calendar as CalendarIcon,
   Clock,
@@ -194,12 +195,14 @@ export function AppointmentWizard({
         </div>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-          <a
-            href={`tel:${hospitalData.contact.primaryPhone}`}
-            className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-navy-900 text-white font-semibold text-xs transition-colors hover:bg-navy-800"
-          >
-            Call OPD Desk: {hospitalData.contact.primaryPhone}
-          </a>
+          {isVerified(hospitalData.contact.primaryPhone) && (
+            <a
+              href={`tel:${hospitalData.contact.primaryPhone}`}
+              className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-navy-900 text-white font-semibold text-xs transition-colors hover:bg-navy-800"
+            >
+              Call OPD Desk: {hospitalData.contact.displayPhone}
+            </a>
+          )}
           <button
             type="button"
             onClick={() => {
@@ -516,7 +519,7 @@ export function AppointmentWizard({
                 </label>
                 <input
                   type="tel"
-                  placeholder="e.g. 9820000000"
+                  placeholder="e.g. 98765 43210"
                   value={formData.patientPhone}
                   onChange={(e) =>
                     setFormData((prev) => ({ ...prev, patientPhone: e.target.value }))

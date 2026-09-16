@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { Container } from "@/components/Container";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { hospitalData } from "@/data/hospital";
+import { isVerified } from "@/lib/verify";
 import { ShieldCheck, Lock, FileText } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -12,6 +13,8 @@ export const metadata: Metadata = {
 };
 
 export default function PrivacyPolicyPage() {
+  const hasEmail = isVerified(hospitalData.contact.email);
+
   return (
     <div className="py-8 space-y-12">
       <Container>
@@ -82,7 +85,9 @@ export default function PrivacyPolicyPage() {
                 5. Contacting the Hospital Privacy Desk
               </h2>
               <p>
-                For questions regarding patient data records or updating your contact preferences, contact our administrative helpdesk at <a href={`mailto:${hospitalData.contact.email}`} className="text-teal-800 font-semibold underline">{hospitalData.contact.email}</a>.
+                For questions regarding patient data records or updating your contact preferences, please reach out directly to our administrative helpdesk at the hospital reception in Nerul, Navi Mumbai{hasEmail ? (
+                  <> or via email at <a href={`mailto:${hospitalData.contact.email}`} className="text-teal-800 font-semibold underline">{hospitalData.contact.email}</a>.</>
+                ) : '.'}
               </p>
             </section>
           </div>

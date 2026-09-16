@@ -3,9 +3,10 @@ import { treatmentsData } from "@/data/treatments";
 import { conditionsData } from "@/data/conditions";
 import { doctorsData } from "@/data/doctors";
 import { articlesData } from "@/data/articles";
+import { SITE_URL } from "@/lib/site";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = "https://shashwathospital.com";
+  const baseUrl = SITE_URL;
   const now = new Date();
 
   // Static core routes

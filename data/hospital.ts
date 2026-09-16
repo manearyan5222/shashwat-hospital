@@ -1,9 +1,13 @@
 /**
  * Centralized Verified Hospital Information Configuration
  * 
- * IMPORTANT CONTENT RULE:
- * Never fabricate hospital statistics, surgery counts, awards, accreditations, or doctor details.
- * Any unconfirmed hospital details must use VERIFY_WITH_HOSPITAL or clear educational placeholders.
+ * STRICT NO-FABRICATION POLICY:
+ * In accordance with project policy, any hospital information not officially
+ * verified with Shashwat Hospital is marked with the literal string "VERIFY_WITH_HOSPITAL"
+ * or sentinel zero coordinates { lat: 0, lng: 0 }.
+ * 
+ * UI components must use isVerified() from "@/lib/verify" to guard rendering
+ * and NEVER output placeholder strings or dead/fake tel/email links to users.
  */
 
 export interface HospitalConfig {
@@ -72,52 +76,52 @@ export interface HospitalConfig {
 export const hospitalData: HospitalConfig = {
   name: "Shashwat Hospital",
   tagline: "Move Better. Live Better.",
-  shortDescription: "Comprehensive orthopaedic and surgical healthcare in Nerul, Navi Mumbai — dedicated to diagnosis, treatment, and functional recovery.",
-  fullDescription: "Shashwat Hospital is an established orthopaedic and surgical healthcare destination located in Nerul, Navi Mumbai. Our clinical approach centres around compassionate patient care, precision orthopaedic diagnostics, evidence-based joint and spine interventions, and tailored rehabilitation.",
+  shortDescription: "Orthopaedic and surgical healthcare in Nerul, Navi Mumbai — focused on diagnosis, treatment, and functional recovery.",
+  fullDescription: "Shashwat Hospital is an orthopaedic and surgical healthcare destination in Nerul, Navi Mumbai. Our clinical focus centres around patient care, orthopaedic diagnostics, evidence-based joint and spine interventions, and structured rehabilitation.",
   brandPromise: "Orthopaedic care focused on helping you return to the life you love.",
   
   location: {
-    addressLine1: "Sector 19A, Near Nerul Railway Station",
-    addressLine2: "Nerul (East)",
-    landmark: "Close to Nerul Station / Palm Beach Road corridor",
+    addressLine1: "VERIFY_WITH_HOSPITAL",
+    addressLine2: "VERIFY_WITH_HOSPITAL",
+    landmark: "VERIFY_WITH_HOSPITAL",
     locality: "Nerul",
     city: "Navi Mumbai",
     state: "Maharashtra",
-    postalCode: "400706",
+    postalCode: "VERIFY_WITH_HOSPITAL",
     country: "India",
     coordinates: {
-      lat: 19.0330,
-      lng: 73.0169,
+      lat: 0,
+      lng: 0,
     },
-    googleMapsEmbedUrl: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d15087.653696803716!2d73.00763264426514!3d19.02353347043019!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3be7c3c0c0000001%3A0x6b4dbfc783d8a4e8!2sNerul%2C%20Navi%20Mumbai%2C%20Maharashtra!5e0!3m2!1sen!2sin!4v1700000000000!5m2!1sen!2sin",
-    googleMapsLink: "https://maps.google.com/?q=Shashwat+Hospital+Nerul+Navi+Mumbai",
+    googleMapsEmbedUrl: "VERIFY_WITH_HOSPITAL",
+    googleMapsLink: "VERIFY_WITH_HOSPITAL",
     nearbyTransit: {
-      railwayStation: "Nerul Railway Station (Harbour & Trans-Harbour Line) — approx. 5 to 7 mins",
-      busStop: "Nerul Sector 19 / LP Bus Stop — regular NMMT and BEST connectivity",
-      highwayAccess: "Conveniently connected via Sion-Panvel Expressway and Palm Beach Road",
-      parkingInfo: "Designated patient drop-off bay and visitor parking available on premises.",
+      railwayStation: "VERIFY_WITH_HOSPITAL",
+      busStop: "VERIFY_WITH_HOSPITAL",
+      highwayAccess: "VERIFY_WITH_HOSPITAL",
+      parkingInfo: "VERIFY_WITH_HOSPITAL",
     },
   },
 
   contact: {
-    primaryPhone: "+91-22-27700000",
-    displayPhone: "+91 (022) 2770 0000 [VERIFY_WITH_HOSPITAL]",
-    emergencyHotline: "+91-22-27700999",
-    displayEmergencyHotline: "+91 (022) 2770 0999 [24x7 Emergency]",
-    appointmentDesk: "+91-9820000000",
-    displayAppointmentDesk: "+91 98200 00000 [OPD Desk]",
-    whatsappNumber: "+91-9820000000",
-    displayWhatsappNumber: "+91 98200 00000",
-    email: "care@shashwathospital.com",
-    emergencyEmail: "emergency@shashwathospital.com",
+    primaryPhone: "VERIFY_WITH_HOSPITAL",
+    displayPhone: "VERIFY_WITH_HOSPITAL",
+    emergencyHotline: "VERIFY_WITH_HOSPITAL",
+    displayEmergencyHotline: "VERIFY_WITH_HOSPITAL",
+    appointmentDesk: "VERIFY_WITH_HOSPITAL",
+    displayAppointmentDesk: "VERIFY_WITH_HOSPITAL",
+    whatsappNumber: "VERIFY_WITH_HOSPITAL",
+    displayWhatsappNumber: "VERIFY_WITH_HOSPITAL",
+    email: "VERIFY_WITH_HOSPITAL",
+    emergencyEmail: "VERIFY_WITH_HOSPITAL",
   },
 
   timings: {
-    opdHours: "Monday to Saturday: 09:00 AM – 08:00 PM (Doctor schedules vary)",
-    emergencyHours: "24 Hours / 7 Days a Week (Trauma & Emergency Care)",
-    visitingHours: "04:30 PM – 07:00 PM (Inpatient wards)",
-    pharmacyHours: "24 Hours Open",
-    radiologyHours: "24 Hours for Emergency X-Ray; Scheduled scans during OPD hours",
+    opdHours: "VERIFY_WITH_HOSPITAL",
+    emergencyHours: "VERIFY_WITH_HOSPITAL",
+    visitingHours: "VERIFY_WITH_HOSPITAL",
+    pharmacyHours: "VERIFY_WITH_HOSPITAL",
+    radiologyHours: "VERIFY_WITH_HOSPITAL",
   },
 
   accreditations: [
@@ -139,9 +143,9 @@ export const hospitalData: HospitalConfig = {
   ],
 
   insuranceAndTpa: {
-    tpaPartnersNotice: "Cashless insurance claims and TPA desk support available. Please check your policy coverage with our insurance helpdesk prior to planned admission.",
-    cashlessFacilityNotice: "Hospital TPA desk facilitates pre-authorization with major insurance providers as per hospital empanelment status.",
-    deskContact: "TPA & Insurance Helpdesk: Contact hospital reception during 10:00 AM – 06:00 PM.",
+    tpaPartnersNotice: "VERIFY_WITH_HOSPITAL",
+    cashlessFacilityNotice: "VERIFY_WITH_HOSPITAL",
+    deskContact: "VERIFY_WITH_HOSPITAL",
   },
 
   legal: {

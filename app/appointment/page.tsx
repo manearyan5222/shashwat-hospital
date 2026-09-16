@@ -4,7 +4,8 @@ import { Container } from "@/components/Container";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { AppointmentWizard } from "@/components/AppointmentWizard";
 import { hospitalData } from "@/data/hospital";
-import { Phone, Clock, ShieldCheck, MapPin } from "lucide-react";
+import { isVerified } from "@/lib/verify";
+import { Phone, Clock, MapPin, Building } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Book an Appointment | Orthopaedic OPD in Nerul",
@@ -17,6 +18,9 @@ export default function AppointmentPage({
 }: {
   searchParams: { doctor?: string; department?: string; treatment?: string; condition?: string };
 }) {
+  const hasVerifiedPhone = isVerified(hospitalData.contact.primaryPhone);
+  const hasVerifiedOpdHours = isVerified(hospitalData.timings.opdHours);
+
   return (
     <div className="py-8 space-y-12">
       <Container>
@@ -28,7 +32,7 @@ export default function AppointmentPage({
             <span>Outpatient Scheduling</span>
           </div>
 
-          <h1 className="font-heading text-3xl sm:text-4xl lg:text-5xl font-extrabold text-navy-950 tracking-tight">
+          <h1 className="font-heading text-3xl sm:text-4xl lg:text-5xl font-extrabold text-[#0B2545] tracking-tight">
             Book an Orthopaedic Consultation
           </h1>
 
@@ -38,31 +42,35 @@ export default function AppointmentPage({
         </div>
 
         {/* Quick Contact & Timings Helper */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-          <div className="p-4 rounded-2xl bg-white border border-surface-border shadow-card flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-teal-50 text-teal-800 flex items-center justify-center shrink-0">
-              <Phone className="w-5 h-5" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-xs">
+          {hasVerifiedPhone && (
+            <div className="p-4 rounded-2xl bg-white border border-surface-border shadow-card flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-teal-50 text-teal-800 flex items-center justify-center shrink-0">
+                <Phone className="w-5 h-5" />
+              </div>
+              <div>
+                <span className="font-bold text-navy-950 block">Direct OPD Hotline</span>
+                <a
+                  href={`tel:${hospitalData.contact.primaryPhone}`}
+                  className="text-teal-800 font-semibold hover:underline"
+                >
+                  {hospitalData.contact.primaryPhone}
+                </a>
+              </div>
             </div>
-            <div>
-              <span className="font-bold text-navy-950 block">Direct OPD Hotline</span>
-              <a
-                href={`tel:${hospitalData.contact.appointmentDesk}`}
-                className="text-teal-800 font-semibold hover:underline"
-              >
-                {hospitalData.contact.primaryPhone}
-              </a>
-            </div>
-          </div>
+          )}
 
-          <div className="p-4 rounded-2xl bg-white border border-surface-border shadow-card flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-teal-50 text-teal-800 flex items-center justify-center shrink-0">
-              <Clock className="w-5 h-5" />
+          {hasVerifiedOpdHours && (
+            <div className="p-4 rounded-2xl bg-white border border-surface-border shadow-card flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-teal-50 text-teal-800 flex items-center justify-center shrink-0">
+                <Clock className="w-5 h-5" />
+              </div>
+              <div>
+                <span className="font-bold text-navy-950 block">OPD Working Hours</span>
+                <span className="text-slate-600">{hospitalData.timings.opdHours}</span>
+              </div>
             </div>
-            <div>
-              <span className="font-bold text-navy-950 block">OPD Working Hours</span>
-              <span className="text-slate-600">09:00 AM – 08:00 PM (Mon–Sat)</span>
-            </div>
-          </div>
+          )}
 
           <div className="p-4 rounded-2xl bg-white border border-surface-border shadow-card flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-teal-50 text-teal-800 flex items-center justify-center shrink-0">
@@ -70,7 +78,11 @@ export default function AppointmentPage({
             </div>
             <div>
               <span className="font-bold text-navy-950 block">Hospital Location</span>
-              <span className="text-slate-600">Sector 19A, Nerul, Navi Mumbai</span>
+              <span className="text-slate-600">
+                {isVerified(hospitalData.location.addressLine1)
+                  ? `${hospitalData.location.addressLine1}, ${hospitalData.location.locality}, ${hospitalData.location.city}`
+                  : `${hospitalData.name}, ${hospitalData.location.locality}, ${hospitalData.location.city}`}
+              </span>
             </div>
           </div>
         </div>

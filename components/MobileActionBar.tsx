@@ -4,6 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { Phone, Calendar, AlertCircle } from "lucide-react";
 import { hospitalData } from "@/data/hospital";
+import { isVerified } from "@/lib/verify";
 
 interface MobileActionBarProps {
   phoneNumber?: string;
@@ -15,21 +16,34 @@ export function MobileActionBar({
   appointmentHref = "/appointment",
 }: MobileActionBarProps) {
   const emergencyNumber = hospitalData.contact.emergencyHotline;
+  const hasPhone = isVerified(phoneNumber);
+  const hasEmergencyPhone = isVerified(emergencyNumber);
 
   return (
     <nav
       aria-label="Mobile Navigation Quick Bar"
       className="fixed bottom-0 left-0 right-0 z-50 h-[64px] bg-[#FFFFFF] border-t border-[#E2E8F0] shadow-[0_-2px_8px_rgba(0,0,0,0.06)] md:hidden flex items-center justify-around"
     >
-      {/* 1. CALL */}
-      <a
-        href={`tel:${phoneNumber}`}
-        className="flex-1 h-full flex flex-col items-center justify-center text-[#0F172A] hover:bg-slate-50 active:bg-slate-100 transition-colors"
-        aria-label="Call Hospital OPD"
-      >
-        <Phone className="w-5 h-5 text-[#0E7490] mb-0.5" />
-        <span className="text-[11px] font-semibold tracking-tight">CALL</span>
-      </a>
+      {/* 1. CALL / CONTACT */}
+      {hasPhone ? (
+        <a
+          href={`tel:${phoneNumber}`}
+          className="flex-1 h-full flex flex-col items-center justify-center text-[#0F172A] hover:bg-slate-50 active:bg-slate-100 transition-colors"
+          aria-label="Call Hospital OPD"
+        >
+          <Phone className="w-5 h-5 text-[#0E7490] mb-0.5" />
+          <span className="text-[11px] font-semibold tracking-tight">CALL</span>
+        </a>
+      ) : (
+        <Link
+          href="/contact"
+          className="flex-1 h-full flex flex-col items-center justify-center text-[#0F172A] hover:bg-slate-50 active:bg-slate-100 transition-colors"
+          aria-label="Hospital Contact Information"
+        >
+          <Phone className="w-5 h-5 text-[#0E7490] mb-0.5" />
+          <span className="text-[11px] font-semibold tracking-tight">CONTACT</span>
+        </Link>
+      )}
 
       {/* 2. BOOK */}
       <Link
@@ -42,14 +56,25 @@ export function MobileActionBar({
       </Link>
 
       {/* 3. EMERGENCY */}
-      <a
-        href={`tel:${emergencyNumber}`}
-        className="flex-1 h-full flex flex-col items-center justify-center text-[#DC2626] hover:bg-red-50 active:bg-red-100 transition-colors"
-        aria-label="Call 24/7 Emergency Care"
-      >
-        <AlertCircle className="w-5 h-5 text-[#DC2626] mb-0.5 animate-pulse" />
-        <span className="text-[11px] font-bold tracking-tight text-[#DC2626]">EMERGENCY</span>
-      </a>
+      {hasEmergencyPhone ? (
+        <a
+          href={`tel:${emergencyNumber}`}
+          className="flex-1 h-full flex flex-col items-center justify-center text-[#DC2626] hover:bg-red-50 active:bg-red-100 transition-colors"
+          aria-label="Call 24/7 Emergency Care"
+        >
+          <AlertCircle className="w-5 h-5 text-[#DC2626] mb-0.5 animate-pulse" />
+          <span className="text-[11px] font-bold tracking-tight text-[#DC2626]">EMERGENCY</span>
+        </a>
+      ) : (
+        <Link
+          href="/emergency"
+          className="flex-1 h-full flex flex-col items-center justify-center text-[#DC2626] hover:bg-red-50 active:bg-red-100 transition-colors"
+          aria-label="24/7 Emergency Care Information"
+        >
+          <AlertCircle className="w-5 h-5 text-[#DC2626] mb-0.5 animate-pulse" />
+          <span className="text-[11px] font-bold tracking-tight text-[#DC2626]">EMERGENCY</span>
+        </Link>
+      )}
     </nav>
   );
 }

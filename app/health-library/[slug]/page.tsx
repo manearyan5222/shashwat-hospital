@@ -15,6 +15,7 @@ import { FAQAccordion } from "@/components/FAQAccordion";
 import { DoctorCard } from "@/components/DoctorCard";
 import { CTASection } from "@/components/CTASection";
 import { FAQJsonLd } from "@/components/JsonLd";
+import { SITE_URL } from "@/lib/site";
 import {
   Clock,
   Calendar,
@@ -23,7 +24,6 @@ import {
   ShieldCheck,
   ArrowRight,
   BookOpen,
-  Share2,
 } from "lucide-react";
 
 export function generateStaticParams() {
@@ -95,7 +95,7 @@ export default function HealthArticleDetailPage({
     publisher: {
       "@type": "Hospital",
       name: hospitalData.name,
-      url: "https://shashwathospital.com",
+      url: SITE_URL,
     },
   };
 

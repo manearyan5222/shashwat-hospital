@@ -6,6 +6,7 @@ import type { Metadata } from "next";
 import { doctorsData, Doctor } from "@/data/doctors";
 import { treatmentsData } from "@/data/treatments";
 import { hospitalData } from "@/data/hospital";
+import { isVerified } from "@/lib/verify";
 import { Container } from "@/components/Container";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { SectionHeading } from "@/components/SectionHeading";
@@ -22,6 +23,7 @@ import {
   ArrowRight,
   ShieldCheck,
   Stethoscope,
+  User,
 } from "lucide-react";
 
 export function generateStaticParams() {
@@ -65,6 +67,11 @@ export default function DoctorProfilePage({
     doctor.treatmentsHandled.includes(t.slug)
   );
 
+  const hasPhoto = isVerified(doctor.imageUrl);
+  const hasReg = isVerified(doctor.registrationNumber);
+  const validQuals = doctor.qualifications.filter(isVerified);
+  const hasPhone = isVerified(hospitalData.contact.primaryPhone);
+
   return (
     <div className="py-8 space-y-16">
       <Container>
@@ -79,15 +86,24 @@ export default function DoctorProfilePage({
         <div className="mt-6 p-6 sm:p-10 rounded-3xl bg-white border border-surface-border shadow-elevated grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           {/* Doctor Image */}
           <div className="lg:col-span-4 space-y-4">
-            <div className="relative aspect-[3/4] rounded-2xl overflow-hidden shadow-md bg-slate-100 border-2 border-slate-100">
-              <Image
-                src={doctor.imageUrl}
-                alt={`${doctor.salutation} ${doctor.name}`}
-                fill
-                priority
-                sizes="(max-width: 768px) 100vw, 33vw"
-                className="object-cover object-top"
-              />
+            <div className="relative aspect-[3/4] rounded-2xl overflow-hidden shadow-md bg-slate-100 border-2 border-slate-100 flex items-center justify-center">
+              {hasPhoto ? (
+                <Image
+                  src={doctor.imageUrl}
+                  alt={`${doctor.salutation} ${doctor.name}`}
+                  fill
+                  priority
+                  sizes="(max-width: 768px) 100vw, 33vw"
+                  className="object-cover object-top"
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center text-slate-400 p-6 text-center">
+                  <User className="w-24 h-24 opacity-40 mb-2" strokeWidth={1.5} />
+                  <span className="text-xs text-slate-500 font-semibold">
+                    {doctor.departmentName} Specialist
+                  </span>
+                </div>
+              )}
             </div>
 
             <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-2">
@@ -99,10 +115,12 @@ export default function DoctorProfilePage({
                 <Building className="w-4 h-4 text-teal-700 shrink-0" />
                 <span>Affiliation: Shashwat Hospital, Nerul</span>
               </div>
-              <div className="flex items-center gap-2 text-slate-700">
-                <ShieldCheck className="w-4 h-4 text-teal-700 shrink-0" />
-                <span>Reg: {doctor.registrationNumber}</span>
-              </div>
+              {hasReg && (
+                <div className="flex items-center gap-2 text-slate-700">
+                  <ShieldCheck className="w-4 h-4 text-teal-700 shrink-0" />
+                  <span>Reg: {doctor.registrationNumber}</span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -121,12 +139,14 @@ export default function DoctorProfilePage({
                 {doctor.designation}
               </p>
 
-              <div className="flex flex-wrap items-center gap-2 mt-2 text-xs font-medium text-slate-600">
-                <span className="flex items-center gap-1">
-                  <Award className="w-4 h-4 text-teal-600" />
-                  {doctor.qualifications.join(" • ")}
-                </span>
-              </div>
+              {validQuals.length > 0 && (
+                <div className="flex flex-wrap items-center gap-2 mt-2 text-xs font-medium text-slate-600">
+                  <span className="flex items-center gap-1">
+                    <Award className="w-4 h-4 text-teal-600" />
+                    {validQuals.join(" • ")}
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* CTAs */}
@@ -139,13 +159,23 @@ export default function DoctorProfilePage({
                 <span>Book OPD Consultation</span>
               </Link>
 
-              <a
-                href={`tel:${hospitalData.contact.primaryPhone}`}
-                className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-slate-50 hover:bg-slate-100 text-navy-950 font-semibold text-xs sm:text-sm border border-slate-200 transition-colors"
-              >
-                <Phone className="w-4 h-4 text-teal-700" />
-                <span>Call Hospital Desk</span>
-              </a>
+              {hasPhone ? (
+                <a
+                  href={`tel:${hospitalData.contact.primaryPhone}`}
+                  className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-slate-50 hover:bg-slate-100 text-navy-950 font-semibold text-xs sm:text-sm border border-slate-200 transition-colors"
+                >
+                  <Phone className="w-4 h-4 text-teal-700" />
+                  <span>Call Hospital Desk</span>
+                </a>
+              ) : (
+                <Link
+                  href="/contact"
+                  className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-slate-50 hover:bg-slate-100 text-navy-950 font-semibold text-xs sm:text-sm border border-slate-200 transition-colors"
+                >
+                  <Building className="w-4 h-4 text-teal-700" />
+                  <span>Hospital Contact & OPD Desk</span>
+                </Link>
+              )}
             </div>
 
             {/* Bio */}

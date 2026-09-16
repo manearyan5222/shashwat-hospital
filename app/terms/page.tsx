@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { Container } from "@/components/Container";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { hospitalData } from "@/data/hospital";
+import { isVerified } from "@/lib/verify";
 import { ShieldAlert, ShieldCheck } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -30,7 +31,7 @@ export default function TermsPage() {
             <ShieldAlert className="w-5 h-5 text-emergency shrink-0 mt-0.5" />
             <div>
               <strong className="font-bold">Important Medical Warning: </strong>
-              If you are experiencing a life-threatening medical emergency or severe acute trauma, call our 24/7 emergency hotline ({hospitalData.contact.displayEmergencyHotline}) immediately or report to the nearest hospital casualty emergency room.
+              If you are experiencing a life-threatening medical emergency or severe acute trauma, {isVerified(hospitalData.contact.emergencyHotline) ? `call our 24/7 emergency hotline (${hospitalData.contact.displayEmergencyHotline}) immediately or report` : `report immediately`} to the nearest hospital casualty emergency room.
             </div>
           </div>
 

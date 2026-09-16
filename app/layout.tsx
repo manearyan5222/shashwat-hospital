@@ -6,6 +6,7 @@ import { Footer } from "@/components/Footer";
 import { MobileActionBar } from "@/components/MobileActionBar";
 import { HospitalJsonLd } from "@/components/JsonLd";
 import { hospitalData } from "@/data/hospital";
+import { SITE_URL } from "@/lib/site";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -21,13 +22,13 @@ const manrope = Manrope({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://shashwathospital.com"),
+  metadataBase: new URL(SITE_URL),
   title: {
     default: "Shashwat Hospital | Orthopaedic & Surgical Care in Nerul, Navi Mumbai",
     template: "%s | Shashwat Hospital Nerul",
   },
   description:
-    "Shashwat Hospital is an established orthopaedic healthcare destination in Nerul, Navi Mumbai offering joint replacement, sports arthroscopy, spine care, 24/7 fracture trauma care, and dedicated rehabilitation.",
+    "Shashwat Hospital is an orthopaedic healthcare destination in Nerul, Navi Mumbai offering joint replacement, sports arthroscopy, spine care, trauma care, and rehabilitation.",
   keywords: [
     "Orthopaedic Hospital in Nerul",
     "Orthopaedic Doctor in Nerul",
@@ -48,10 +49,10 @@ export const metadata: Metadata = {
     address: true,
   },
   openGraph: {
-    title: "Shashwat Hospital | Premium Orthopaedic & Surgical Care in Nerul",
+    title: "Shashwat Hospital | Orthopaedic & Surgical Care in Nerul",
     description:
       "Patient-first orthopaedic care: joint replacement, sports injuries, spine care, fracture trauma, and rehabilitation in Nerul, Navi Mumbai.",
-    url: "https://shashwathospital.com",
+    url: SITE_URL,
     siteName: "Shashwat Hospital",
     locale: "en_IN",
     type: "website",

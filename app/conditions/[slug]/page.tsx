@@ -7,6 +7,7 @@ import { conditionsData, Condition } from "@/data/conditions";
 import { treatmentsData } from "@/data/treatments";
 import { doctorsData } from "@/data/doctors";
 import { hospitalData } from "@/data/hospital";
+import { isVerified } from "@/lib/verify";
 import { Container } from "@/components/Container";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { SectionHeading } from "@/components/SectionHeading";
@@ -108,13 +109,15 @@ export default function ConditionDetailPage({
                 <span>Consult an Orthopaedic Specialist</span>
               </Link>
 
-              <a
-                href={`tel:${hospitalData.contact.primaryPhone}`}
-                className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-700 hover:text-navy-900 px-3 py-2"
-              >
-                <Phone className="w-3.5 h-3.5 text-teal-700" />
-                <span>OPD Desk: {hospitalData.contact.primaryPhone}</span>
-              </a>
+              {isVerified(hospitalData.contact.primaryPhone) && (
+                <a
+                  href={`tel:${hospitalData.contact.primaryPhone}`}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-700 hover:text-navy-900 px-3 py-2"
+                >
+                  <Phone className="w-3.5 h-3.5 text-teal-700" />
+                  <span>OPD Desk: {hospitalData.contact.displayPhone}</span>
+                </a>
+              )}
             </div>
           </div>
 

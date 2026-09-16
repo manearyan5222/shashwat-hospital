@@ -177,7 +177,7 @@ export default function HomePage() {
                     <span>Orthopaedic Centre of Excellence</span>
                   </div>
                   <p className="text-xs text-slate-200 pt-0.5">
-                    Sector 19A, Nerul · Navi Mumbai
+                    {hospitalData.location.locality}, {hospitalData.location.city}
                   </p>
                 </div>
               </div>

@@ -8,14 +8,20 @@ import {
   ShieldAlert,
   ChevronRight,
   ShieldCheck,
-  HeartHandshake,
-  FileText,
 } from "lucide-react";
 import { hospitalData } from "@/data/hospital";
 import { departmentsData } from "@/data/departments";
+import { isVerified } from "@/lib/verify";
 import { Container } from "./Container";
 
 export function Footer() {
+  const hasVerifiedEmergency = isVerified(hospitalData.contact.emergencyHotline);
+  const hasVerifiedPhone = isVerified(hospitalData.contact.primaryPhone);
+  const hasVerifiedEmail = isVerified(hospitalData.contact.email);
+  const hasVerifiedOpdHours = isVerified(hospitalData.timings.opdHours);
+  const hasVerifiedAddressLine = isVerified(hospitalData.location.addressLine1);
+  const hasVerifiedMapsLink = isVerified(hospitalData.location.googleMapsLink);
+
   return (
     <footer className="bg-navy-950 text-slate-300 pt-16 pb-24 md:pb-12 border-t border-navy-900">
       <Container>
@@ -32,27 +38,29 @@ export function Footer() {
                   SHASHWAT HOSPITAL
                 </span>
                 <span className="text-xs font-semibold tracking-wider text-teal-400 uppercase">
-                  Nerul, Navi Mumbai
+                  {hospitalData.location.locality}, {hospitalData.location.city}
                 </span>
               </div>
             </Link>
 
             <p className="text-sm text-slate-400 leading-relaxed max-w-sm">
-              Dedicated orthopaedic and surgical healthcare destination providing precision joint replacement, arthroscopic sports surgery, spine evaluation, fracture trauma care, and dedicated rehabilitation.
+              Dedicated orthopaedic and surgical healthcare destination providing joint replacement, arthroscopic sports surgery, spine evaluation, fracture trauma care, and rehabilitation.
             </p>
 
-            <div className="p-4 rounded-xl bg-navy-900/90 border border-navy-800 space-y-2">
-              <div className="flex items-center gap-2 text-red-400 font-bold text-xs uppercase tracking-wider">
-                <ShieldAlert className="w-4 h-4 text-emergency" />
-                <span>24/7 Trauma & Emergency Hotline</span>
+            {hasVerifiedEmergency && (
+              <div className="p-4 rounded-xl bg-navy-900/90 border border-navy-800 space-y-2">
+                <div className="flex items-center gap-2 text-red-400 font-bold text-xs uppercase tracking-wider">
+                  <ShieldAlert className="w-4 h-4 text-emergency" />
+                  <span>24/7 Trauma & Emergency Hotline</span>
+                </div>
+                <p className="text-lg font-bold text-white tracking-tight">
+                  {hospitalData.contact.emergencyHotline}
+                </p>
+                <p className="text-xs text-slate-400">
+                  Casualty Medical Officer & On-Call Orthopaedic Surgeon available round the clock.
+                </p>
               </div>
-              <p className="text-lg font-bold text-white tracking-tight">
-                {hospitalData.contact.displayEmergencyHotline}
-              </p>
-              <p className="text-xs text-slate-400">
-                Casualty Medical Officer & On-Call Orthopaedic Surgeon available round the clock.
-              </p>
-            </div>
+            )}
           </div>
 
           {/* Column 2: Orthopaedic Specialties */}
@@ -143,35 +151,43 @@ export function Footer() {
               <div className="flex items-start gap-2">
                 <MapPin className="w-4 h-4 text-teal-400 shrink-0 mt-0.5" />
                 <span>
-                  {hospitalData.location.addressLine1}, {hospitalData.location.addressLine2},{" "}
-                  {hospitalData.location.locality}, {hospitalData.location.city},{" "}
-                  {hospitalData.location.state} - {hospitalData.location.postalCode}
+                  {hasVerifiedAddressLine
+                    ? `${hospitalData.location.addressLine1}, ${hospitalData.location.addressLine2}, ${hospitalData.location.locality}, ${hospitalData.location.city}, ${hospitalData.location.state} - ${hospitalData.location.postalCode}`
+                    : `${hospitalData.name}, ${hospitalData.location.locality}, ${hospitalData.location.city}, ${hospitalData.location.state}, ${hospitalData.location.country}`}
                 </span>
               </div>
-              <div className="flex items-center gap-2">
-                <Phone className="w-4 h-4 text-teal-400 shrink-0" />
-                <span>OPD Desk: {hospitalData.contact.primaryPhone}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Mail className="w-4 h-4 text-teal-400 shrink-0" />
-                <span>{hospitalData.contact.email}</span>
-              </div>
-              <div className="flex items-start gap-2">
-                <Clock className="w-4 h-4 text-teal-400 shrink-0 mt-0.5" />
-                <span>{hospitalData.timings.opdHours}</span>
-              </div>
+              {hasVerifiedPhone && (
+                <div className="flex items-center gap-2">
+                  <Phone className="w-4 h-4 text-teal-400 shrink-0" />
+                  <span>OPD Desk: {hospitalData.contact.primaryPhone}</span>
+                </div>
+              )}
+              {hasVerifiedEmail && (
+                <div className="flex items-center gap-2">
+                  <Mail className="w-4 h-4 text-teal-400 shrink-0" />
+                  <span>{hospitalData.contact.email}</span>
+                </div>
+              )}
+              {hasVerifiedOpdHours && (
+                <div className="flex items-start gap-2">
+                  <Clock className="w-4 h-4 text-teal-400 shrink-0 mt-0.5" />
+                  <span>{hospitalData.timings.opdHours}</span>
+                </div>
+              )}
 
-              <div className="pt-2">
-                <a
-                  href={hospitalData.location.googleMapsLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-800/60 hover:bg-teal-700 text-teal-100 text-xs font-semibold border border-teal-600 transition-colors"
-                >
-                  <MapPin className="w-3 h-3" />
-                  <span>Open Google Maps</span>
-                </a>
-              </div>
+              {hasVerifiedMapsLink && (
+                <div className="pt-2">
+                  <a
+                    href={hospitalData.location.googleMapsLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-800/60 hover:bg-teal-700 text-teal-100 text-xs font-semibold border border-teal-600 transition-colors"
+                  >
+                    <MapPin className="w-3 h-3" />
+                    <span>Open Google Maps</span>
+                  </a>
+                </div>
+              )}
             </div>
           </div>
         </div>

@@ -1,46 +1,35 @@
 import React from "react";
 import { hospitalData } from "@/data/hospital";
+import { isVerified } from "@/lib/verify";
+import { SITE_URL } from "@/lib/site";
 
 export function HospitalJsonLd() {
-  const schema = {
+  const hasVerifiedAddress = isVerified(hospitalData.location.addressLine1);
+  const hasVerifiedPhone = isVerified(hospitalData.contact.primaryPhone);
+  const hasVerifiedEmergency = isVerified(hospitalData.contact.emergencyHotline);
+  const hasVerifiedEmail = isVerified(hospitalData.contact.email);
+  const hasVerifiedCoords =
+    hospitalData.location.coordinates.lat !== 0 &&
+    hospitalData.location.coordinates.lng !== 0;
+
+  const schema: Record<string, unknown> = {
     "@context": "https://schema.org",
     "@type": ["Hospital", "MedicalOrganization", "MedicalClinic"],
     name: hospitalData.name,
     description: hospitalData.fullDescription,
-    url: "https://shashwathospital.com",
-    telephone: hospitalData.contact.primaryPhone,
-    emergencyTelephone: hospitalData.contact.emergencyHotline,
-    email: hospitalData.contact.email,
+    url: SITE_URL,
     address: {
       "@type": "PostalAddress",
-      streetAddress: `${hospitalData.location.addressLine1}, ${hospitalData.location.addressLine2}`,
+      streetAddress: hasVerifiedAddress
+        ? `${hospitalData.location.addressLine1}, ${hospitalData.location.addressLine2}`
+        : undefined,
       addressLocality: hospitalData.location.locality,
       addressRegion: hospitalData.location.state,
-      postalCode: hospitalData.location.postalCode,
+      postalCode: isVerified(hospitalData.location.postalCode)
+        ? hospitalData.location.postalCode
+        : undefined,
       addressCountry: "IN",
     },
-    geo: {
-      "@type": "GeoCoordinates",
-      latitude: hospitalData.location.coordinates.lat,
-      longitude: hospitalData.location.coordinates.lng,
-    },
-    openingHoursSpecification: [
-      {
-        "@type": "OpeningHoursSpecification",
-        dayOfWeek: [
-          "Monday",
-          "Tuesday",
-          "Wednesday",
-          "Thursday",
-          "Friday",
-          "Saturday",
-          "Sunday",
-        ],
-        opens: "00:00",
-        closes: "23:59",
-        description: "24/7 Emergency Trauma Intake",
-      },
-    ],
     medicalSpecialty: [
       "Orthopedics",
       "Surgical",
@@ -76,6 +65,23 @@ export function HospitalJsonLd() {
       },
     ],
   };
+
+  if (hasVerifiedPhone) {
+    schema.telephone = hospitalData.contact.primaryPhone;
+  }
+  if (hasVerifiedEmergency) {
+    schema.emergencyTelephone = hospitalData.contact.emergencyHotline;
+  }
+  if (hasVerifiedEmail) {
+    schema.email = hospitalData.contact.email;
+  }
+  if (hasVerifiedCoords) {
+    schema.geo = {
+      "@type": "GeoCoordinates",
+      latitude: hospitalData.location.coordinates.lat,
+      longitude: hospitalData.location.coordinates.lng,
+    };
+  }
 
   return (
     <script

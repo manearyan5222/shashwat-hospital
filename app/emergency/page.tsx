@@ -1,8 +1,10 @@
 import React from "react";
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Container } from "@/components/Container";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { hospitalData } from "@/data/hospital";
+import { isVerified } from "@/lib/verify";
 import {
   PhoneCall,
   Navigation,
@@ -22,6 +24,15 @@ export const metadata: Metadata = {
 };
 
 export default function EmergencyPage() {
+  const hasEmergencyPhone = isVerified(hospitalData.contact.emergencyHotline);
+  const hasMapsLink = isVerified(hospitalData.location.googleMapsLink);
+  const addressParts = [
+    isVerified(hospitalData.location.addressLine1) ? hospitalData.location.addressLine1 : null,
+    isVerified(hospitalData.location.addressLine2) ? hospitalData.location.addressLine2 : null,
+    hospitalData.location.locality,
+    hospitalData.location.city,
+  ].filter(Boolean).join(", ");
+
   return (
     <div className="py-8 space-y-12">
       <Container>
@@ -47,23 +58,43 @@ export default function EmergencyPage() {
 
             {/* Direct Emergency Action Buttons */}
             <div className="pt-3 flex flex-wrap items-center gap-4">
-              <a
-                href={`tel:${hospitalData.contact.emergencyHotline}`}
-                className="inline-flex items-center justify-center gap-2.5 px-6 py-4 rounded-xl bg-white text-emergency font-extrabold text-base sm:text-lg hover:bg-red-50 active:scale-95 transition-all shadow-xl"
-              >
-                <PhoneCall className="w-5 h-5" />
-                <span>Call Emergency: {hospitalData.contact.displayEmergencyHotline}</span>
-              </a>
+              {hasEmergencyPhone ? (
+                <a
+                  href={`tel:${hospitalData.contact.emergencyHotline}`}
+                  className="inline-flex items-center justify-center gap-2.5 px-6 py-4 rounded-xl bg-white text-emergency font-extrabold text-base sm:text-lg hover:bg-red-50 active:scale-95 transition-all shadow-xl"
+                >
+                  <PhoneCall className="w-5 h-5" />
+                  <span>Call Emergency: {hospitalData.contact.displayEmergencyHotline}</span>
+                </a>
+              ) : (
+                <Link
+                  href="/contact"
+                  className="inline-flex items-center justify-center gap-2.5 px-6 py-4 rounded-xl bg-white text-emergency font-extrabold text-base sm:text-lg hover:bg-red-50 active:scale-95 transition-all shadow-xl"
+                >
+                  <MapPin className="w-5 h-5" />
+                  <span>Reach Emergency Casualty</span>
+                </Link>
+              )}
 
-              <a
-                href={hospitalData.location.googleMapsLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-2 px-5 py-4 rounded-xl bg-red-950/80 hover:bg-red-900 text-white font-bold text-sm border border-white/30 transition-all"
-              >
-                <Navigation className="w-5 h-5" />
-                <span>Get Instant Hospital Directions</span>
-              </a>
+              {hasMapsLink ? (
+                <a
+                  href={hospitalData.location.googleMapsLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center gap-2 px-5 py-4 rounded-xl bg-red-950/80 hover:bg-red-900 text-white font-bold text-sm border border-white/30 transition-all"
+                >
+                  <Navigation className="w-5 h-5" />
+                  <span>Get Hospital Directions</span>
+                </a>
+              ) : (
+                <Link
+                  href="/contact"
+                  className="inline-flex items-center justify-center gap-2 px-5 py-4 rounded-xl bg-red-950/80 hover:bg-red-900 text-white font-bold text-sm border border-white/30 transition-all"
+                >
+                  <Navigation className="w-5 h-5" />
+                  <span>View Location & Entry Details</span>
+                </Link>
+              )}
             </div>
           </div>
         </div>
@@ -168,17 +199,26 @@ export default function EmergencyPage() {
                 Emergency Entry: Shashwat Hospital
               </p>
               <p className="text-xs text-slate-600">
-                {hospitalData.location.addressLine1}, {hospitalData.location.addressLine2}, Nerul, Navi Mumbai. Dedicated ambulance bay & wheelchair ramp at ground floor entrance.
+                {addressParts}. Dedicated ambulance bay & wheelchair ramp at ground floor entrance.
               </p>
             </div>
           </div>
 
-          <a
-            href={`tel:${hospitalData.contact.emergencyHotline}`}
-            className="px-5 py-2.5 rounded-xl bg-emergency text-white font-bold text-xs whitespace-nowrap shadow-md hover:bg-red-700 transition-colors"
-          >
-            Call Casualty Desk
-          </a>
+          {hasEmergencyPhone ? (
+            <a
+              href={`tel:${hospitalData.contact.emergencyHotline}`}
+              className="px-5 py-2.5 rounded-xl bg-emergency text-white font-bold text-xs whitespace-nowrap shadow-md hover:bg-red-700 transition-colors"
+            >
+              Call Casualty Desk
+            </a>
+          ) : (
+            <Link
+              href="/contact"
+              className="px-5 py-2.5 rounded-xl bg-navy-900 text-white font-bold text-xs whitespace-nowrap shadow-md hover:bg-navy-800 transition-colors"
+            >
+              Contact Details
+            </Link>
+          )}
         </div>
       </Container>
     </div>

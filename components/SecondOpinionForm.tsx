@@ -1,8 +1,10 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import { doctorsData } from "@/data/doctors";
 import { hospitalData } from "@/data/hospital";
+import { isVerified } from "@/lib/verify";
 import {
   Shield,
   FileCheck,
@@ -81,13 +83,22 @@ export function SecondOpinionForm() {
           <div>• Previous surgical or discharge summaries (if any)</div>
           <div>• Current medical prescriptions</div>
         </div>
-        <a
-          href={`tel:${hospitalData.contact.primaryPhone}`}
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-navy-900 text-white text-xs font-semibold hover:bg-navy-800 transition-colors"
-        >
-          <Phone className="w-4 h-4 text-teal-300" />
-          <span>Call Hospital Coordinator</span>
-        </a>
+        {isVerified(hospitalData.contact.primaryPhone) ? (
+          <a
+            href={`tel:${hospitalData.contact.primaryPhone}`}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-navy-900 text-white text-xs font-semibold hover:bg-navy-800 transition-colors"
+          >
+            <Phone className="w-4 h-4 text-teal-300" />
+            <span>Call Hospital Coordinator: {hospitalData.contact.displayPhone}</span>
+          </a>
+        ) : (
+          <Link
+            href="/contact"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-navy-900 text-white text-xs font-semibold hover:bg-navy-800 transition-colors"
+          >
+            <span>View Hospital Contact Details</span>
+          </Link>
+        )}
       </div>
     );
   }
@@ -141,7 +152,7 @@ export function SecondOpinionForm() {
             </label>
             <input
               type="tel"
-              placeholder="e.g. 9820000000"
+              placeholder="e.g. 98765 43210"
               value={formData.patientPhone}
               onChange={(e) =>
                 setFormData((prev) => ({ ...prev, patientPhone: e.target.value }))

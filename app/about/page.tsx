@@ -9,6 +9,7 @@ import { CTASection } from "@/components/CTASection";
 import { LocationCard } from "@/components/LocationCard";
 import { hospitalData } from "@/data/hospital";
 import { doctorsData } from "@/data/doctors";
+import { isVerified } from "@/lib/verify";
 import { facilitiesData } from "@/data/facilities";
 import {
   ShieldCheck,
@@ -168,7 +169,9 @@ export default function AboutPage() {
                     {doc.salutation} {doc.name}
                   </h4>
                   <p className="text-xs text-teal-800 font-medium">{doc.designation}</p>
-                  <p className="text-[11px] text-slate-500 mt-1">{doc.qualifications.join(" • ")}</p>
+                  {doc.qualifications.filter(isVerified).length > 0 && (
+                    <p className="text-[11px] text-slate-500 mt-1">{doc.qualifications.filter(isVerified).join(" • ")}</p>
+                  )}
                 </div>
               </div>
             ))}

@@ -1,6 +1,7 @@
 import React from "react";
 import Link from "next/link";
 import { ChevronRight, Home } from "lucide-react";
+import { SITE_URL } from "@/lib/site";
 
 export interface BreadcrumbItem {
   label: string;
@@ -21,13 +22,13 @@ export function Breadcrumbs({ items, className = "" }: BreadcrumbsProps) {
         "@type": "ListItem",
         position: 1,
         name: "Home",
-        item: "https://shashwathospital.com",
+        item: SITE_URL,
       },
       ...items.map((item, idx) => ({
         "@type": "ListItem",
         position: idx + 2,
         name: item.label,
-        item: item.href ? `https://shashwathospital.com${item.href}` : undefined,
+        item: item.href ? `${SITE_URL}${item.href}` : undefined,
       })),
     ],
   };

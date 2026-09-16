@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { doctorsData, Doctor } from "@/data/doctors";
+import { isVerified } from "@/lib/verify";
 import { ArrowRight, CheckCircle2, User, Calendar, Stethoscope, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -104,9 +105,11 @@ export function DoctorFinder() {
                     {doc.salutation} {doc.name}
                   </h4>
                   <p className="text-xs text-teal-800 font-medium">{doc.designation}</p>
-                  <p className="text-xs text-slate-500 mt-1">
-                    {doc.qualifications.join(" • ")}
-                  </p>
+                  {doc.qualifications.filter(isVerified).length > 0 && (
+                    <p className="text-xs text-slate-500 mt-1">
+                      {doc.qualifications.filter(isVerified).join(" • ")}
+                    </p>
+                  )}
                 </div>
               </div>
 
