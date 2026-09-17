@@ -429,8 +429,17 @@ export async function updateSecondOpinionStatus(id: string, status: RequestStatu
 }
 
 // ---------------------------------------------------------------------------
-// Patients Management
+// Patients Management & Sanitization
 // ---------------------------------------------------------------------------
+
+/**
+ * Strips internal and sensitive credential fields (such as devPassword) from patient records
+ * before sending them in any API response.
+ */
+export function toPublicPatient(patient: PatientRecord): Omit<PatientRecord, "devPassword"> {
+  const { devPassword, ...safe } = patient;
+  return safe;
+}
 
 export async function getPatients(): Promise<PatientRecord[]> {
   const supabase = getServiceSupabase();

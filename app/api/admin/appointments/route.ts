@@ -1,9 +1,17 @@
 import { NextResponse } from "next/server";
 import { getAppointments, updateAppointmentStatus } from "@/lib/supabase/service";
+import { getAuthenticatedStaff } from "@/lib/supabase/auth-helper";
 import { RequestStatus } from "@/types/database";
+
+export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   try {
+    const staffAuth = await getAuthenticatedStaff(["admin", "receptionist"]);
+    if (!staffAuth) {
+      return NextResponse.json({ message: "Authentication required." }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status") || "all";
     const search = searchParams.get("search") || "";
@@ -18,6 +26,11 @@ export async function GET(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
+    const staffAuth = await getAuthenticatedStaff(["admin", "receptionist"]);
+    if (!staffAuth) {
+      return NextResponse.json({ message: "Authentication required." }, { status: 401 });
+    }
+
     const body = await request.json();
     const { id, status, staff_notes } = body;
 

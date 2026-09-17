@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAuthenticatedDoctor } from "@/lib/supabase/auth-helper";
-import { getAssignedPatientsForDoctor, getAppointments } from "@/lib/supabase/service";
+import { getAssignedPatientsForDoctor, getAppointments, toPublicPatient } from "@/lib/supabase/service";
 import { secureLog } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
@@ -17,12 +17,13 @@ export async function GET(request: Request) {
 
     const doctorId = doctorAuth.doctorId;
     const patients = await getAssignedPatientsForDoctor(doctorId);
+    const sanitizedPatients = patients.map(toPublicPatient);
     const appointments = await getAppointments();
     const doctorAppointments = appointments.filter((a) => a.doctor_id === doctorId || !a.doctor_id);
 
     return NextResponse.json({
       success: true,
-      patients,
+      patients: sanitizedPatients,
       appointments: doctorAppointments,
     });
   } catch (error) {

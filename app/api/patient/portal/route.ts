@@ -5,6 +5,7 @@ import {
   getTreatmentNotesByPatientId,
   getPatientReports,
   generateSignedReportUrl,
+  toPublicPatient,
 } from "@/lib/supabase/service";
 import { logAuditEvent } from "@/lib/audit";
 import { secureLog } from "@/lib/security";
@@ -53,7 +54,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       success: true,
-      patient,
+      patient: toPublicPatient(patient),
       visits,
       notes,
       reports: reportsWithSignedUrls,

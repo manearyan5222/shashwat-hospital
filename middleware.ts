@@ -19,9 +19,12 @@ export async function middleware(request: NextRequest) {
   });
 
   // -------------------------------------------------------------------------
-  // 1. ADMIN SURFACE ROUTE PROTECTION (/admin/*)
+  // 1. ADMIN SURFACE & API PROTECTION (/admin/*, /api/admin/*)
   // -------------------------------------------------------------------------
-  if (pathname.startsWith("/admin") && !pathname.startsWith("/admin/login")) {
+  if (
+    (pathname.startsWith("/admin") || pathname.startsWith("/api/admin")) &&
+    !pathname.startsWith("/admin/login")
+  ) {
     let isStaffAuthenticated = false;
 
     if (isConfigured) {
@@ -64,6 +67,9 @@ export async function middleware(request: NextRequest) {
     }
 
     if (!isStaffAuthenticated) {
+      if (pathname.startsWith("/api/")) {
+        return NextResponse.json({ message: "Authentication required." }, { status: 401 });
+      }
       const loginUrl = new URL("/admin/login", request.url);
       loginUrl.searchParams.set("redirect", pathname);
       return NextResponse.redirect(loginUrl);
@@ -71,9 +77,12 @@ export async function middleware(request: NextRequest) {
   }
 
   // -------------------------------------------------------------------------
-  // 2. DOCTOR PWA SURFACE ROUTE PROTECTION (/doctor/*)
+  // 2. DOCTOR PWA SURFACE & API PROTECTION (/doctor/*, /api/doctor/*)
   // -------------------------------------------------------------------------
-  if (pathname.startsWith("/doctor") && !pathname.startsWith("/doctor/login")) {
+  if (
+    (pathname.startsWith("/doctor") || pathname.startsWith("/api/doctor")) &&
+    !pathname.startsWith("/doctor/login")
+  ) {
     let isDoctorAuthenticated = false;
 
     if (isConfigured) {
@@ -115,6 +124,9 @@ export async function middleware(request: NextRequest) {
     }
 
     if (!isDoctorAuthenticated) {
+      if (pathname.startsWith("/api/")) {
+        return NextResponse.json({ message: "Authentication required." }, { status: 401 });
+      }
       const loginUrl = new URL("/doctor/login", request.url);
       loginUrl.searchParams.set("redirect", pathname);
       return NextResponse.redirect(loginUrl);
@@ -122,9 +134,13 @@ export async function middleware(request: NextRequest) {
   }
 
   // -------------------------------------------------------------------------
-  // 3. PATIENT SELF-PORTAL SURFACE ROUTE PROTECTION (/patient/*)
+  // 3. PATIENT SELF-PORTAL & API PROTECTION (/patient/*, /api/patient/*)
   // -------------------------------------------------------------------------
-  if (pathname.startsWith("/patient") && !pathname.startsWith("/patient/login")) {
+  if (
+    (pathname.startsWith("/patient") || pathname.startsWith("/api/patient")) &&
+    !pathname.startsWith("/patient/login") &&
+    !pathname.startsWith("/api/patient/auth")
+  ) {
     let isPatientAuthenticated = false;
 
     if (isConfigured) {
@@ -158,6 +174,9 @@ export async function middleware(request: NextRequest) {
     }
 
     if (!isPatientAuthenticated) {
+      if (pathname.startsWith("/api/")) {
+        return NextResponse.json({ message: "Authentication required." }, { status: 401 });
+      }
       const loginUrl = new URL("/patient/login", request.url);
       loginUrl.searchParams.set("redirect", pathname);
       return NextResponse.redirect(loginUrl);
@@ -172,5 +191,8 @@ export const config = {
     "/admin/:path*",
     "/doctor/:path*",
     "/patient/:path*",
+    "/api/admin/:path*",
+    "/api/doctor/:path*",
+    "/api/patient/:path*",
   ],
 };

@@ -1,9 +1,17 @@
 import { NextResponse } from "next/server";
 import { getAppointments, getSecondOpinions } from "@/lib/supabase/service";
+import { getAuthenticatedStaff } from "@/lib/supabase/auth-helper";
 import { DashboardStats } from "@/types/database";
+
+export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
+    const staffAuth = await getAuthenticatedStaff(["admin", "receptionist"]);
+    if (!staffAuth) {
+      return NextResponse.json({ message: "Authentication required." }, { status: 401 });
+    }
+
     const appointments = await getAppointments();
     const secondOpinions = await getSecondOpinions();
 
