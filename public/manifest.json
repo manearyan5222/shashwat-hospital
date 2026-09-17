@@ -1,0 +1,21 @@
+{
+  "name": "Shashwat Hospital — Doctor Clinical Workspace",
+  "short_name": "Doctor PWA",
+  "description": "Clinical workstation for Shashwat Hospital consultants and surgeons",
+  "start_url": "/doctor",
+  "display": "standalone",
+  "background_color": "#0B2545",
+  "theme_color": "#0E7490",
+  "icons": [
+    {
+      "src": "/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

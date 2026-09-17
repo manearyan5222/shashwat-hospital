@@ -2,27 +2,29 @@
 
 import React from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import {
   Calendar,
   FileText,
-  LayoutDashboard,
   LogOut,
   ShieldCheck,
   Building,
   UserCheck,
-  Clock,
+  Users,
   ExternalLink,
+  ShieldAlert,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { StaffRole } from "@/types/database";
 
 interface AdminSidebarProps {
-  activeTab: "appointments" | "second-opinions";
-  onTabChange: (tab: "appointments" | "second-opinions") => void;
+  activeTab: "appointments" | "second-opinions" | "doctors";
+  onTabChange: (tab: "appointments" | "second-opinions" | "doctors") => void;
   newAppointmentsCount?: number;
   newSecondOpinionsCount?: number;
   staffEmail?: string;
+  userRole?: StaffRole;
 }
 
 export function AdminSidebar({
@@ -31,6 +33,7 @@ export function AdminSidebar({
   newAppointmentsCount = 0,
   newSecondOpinionsCount = 0,
   staffEmail = "staff@shashwathospital.com",
+  userRole = "admin",
 }: AdminSidebarProps) {
   const router = useRouter();
 
@@ -40,7 +43,6 @@ export function AdminSidebar({
       if (supabase) {
         await supabase.auth.signOut();
       }
-      // Clear cookie and local storage
       document.cookie = "shashwat_staff_session=; path=/; max-age=0";
       localStorage.removeItem("shashwat_staff_user");
       router.push("/admin/login");
@@ -63,7 +65,7 @@ export function AdminSidebar({
             </div>
             <div className="text-[10px] uppercase font-bold tracking-wider text-teal-400 mt-1 flex items-center gap-1">
               <ShieldCheck className="w-3 h-3" />
-              <span>Staff Triage Portal</span>
+              <span>{userRole === "admin" ? "Hospital Admin" : "Receptionist Portal"}</span>
             </div>
           </div>
         </div>
@@ -116,18 +118,68 @@ export function AdminSidebar({
             )}
           </button>
 
+          {/* Doctor Management Tab - Admin Only */}
+          {userRole === "admin" && (
+            <>
+              <div className="px-3 pt-5 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                Staff & Operations
+              </div>
+
+              <button
+                type="button"
+                onClick={() => onTabChange("doctors")}
+                className={cn(
+                  "w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all text-left",
+                  activeTab === "doctors"
+                    ? "bg-teal-600/20 text-teal-300 border border-teal-500/30 shadow-sm"
+                    : "text-slate-400 hover:text-white hover:bg-slate-800/60"
+                )}
+              >
+                <div className="flex items-center gap-2.5">
+                  <Users className="w-4 h-4 text-teal-400" />
+                  <span>Doctor Management</span>
+                </div>
+                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-800 text-slate-400 border border-slate-700">
+                  Admin
+                </span>
+              </button>
+            </>
+          )}
+
           <div className="px-3 pt-5 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">
-            Hospital Public Site
+            Portals & Links
           </div>
+
+          <Link
+            href="/doctor"
+            className="w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800/60 transition-colors"
+          >
+            <div className="flex items-center gap-2.5">
+              <UserCheck className="w-4 h-4 text-cyan-400" />
+              <span>Doctor PWA</span>
+            </div>
+            <ExternalLink className="w-3 h-3 opacity-50" />
+          </Link>
+
+          <Link
+            href="/patient"
+            className="w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800/60 transition-colors"
+          >
+            <div className="flex items-center gap-2.5">
+              <Building className="w-4 h-4 text-teal-400" />
+              <span>Patient Portal</span>
+            </div>
+            <ExternalLink className="w-3 h-3 opacity-50" />
+          </Link>
 
           <Link
             href="/"
             target="_blank"
-            className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800/60 transition-colors"
+            className="w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800/60 transition-colors"
           >
             <div className="flex items-center gap-2.5">
               <Building className="w-4 h-4 text-slate-500" />
-              <span>View Live Website</span>
+              <span>Public Website</span>
             </div>
             <ExternalLink className="w-3.5 h-3.5 opacity-50" />
           </Link>
@@ -142,7 +194,7 @@ export function AdminSidebar({
           </div>
           <div className="overflow-hidden">
             <div className="text-xs font-bold text-white truncate">{staffEmail}</div>
-            <div className="text-[10px] text-slate-400">Hospital Duty Desk</div>
+            <div className="text-[10px] text-teal-400 font-semibold uppercase">{userRole}</div>
           </div>
         </div>
 

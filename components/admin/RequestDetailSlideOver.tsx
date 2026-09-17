@@ -315,13 +315,42 @@ export function RequestDetailSlideOver({
 
           {/* Drawer Footer Actions */}
           <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2.5 rounded-xl border border-slate-300 hover:bg-slate-100 text-slate-700 font-semibold text-xs transition-colors"
-            >
-              Back to List
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2.5 rounded-xl border border-slate-300 hover:bg-slate-100 text-slate-700 font-semibold text-xs transition-colors"
+              >
+                Back to List
+              </button>
+
+              {isAppointment && apt && !apt.patient_id && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setIsSaving(true);
+                    try {
+                      const res = await fetch("/api/admin/triage", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ appointmentId: apt.id, doctorId: apt.doctor_id }),
+                      });
+                      if (res.ok) {
+                        setCurrentStatus("confirmed");
+                        setSaveSuccess(true);
+                      }
+                    } finally {
+                      setIsSaving(false);
+                    }
+                  }}
+                  disabled={isSaving}
+                  className="px-3.5 py-2.5 rounded-xl bg-cyan-700 hover:bg-cyan-800 text-white font-bold text-xs shadow-sm flex items-center gap-1.5 transition-all"
+                >
+                  <ShieldCheck className="w-4 h-4" />
+                  <span>Triage to Patient Record</span>
+                </button>
+              )}
+            </div>
 
             <button
               type="button"

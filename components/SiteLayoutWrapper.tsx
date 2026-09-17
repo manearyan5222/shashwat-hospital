@@ -9,10 +9,13 @@ import { HospitalJsonLd } from "@/components/JsonLd";
 
 export function SiteLayoutWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isAdmin = pathname?.startsWith("/admin");
+  const isInternalPortal =
+    pathname?.startsWith("/admin") ||
+    pathname?.startsWith("/doctor") ||
+    pathname?.startsWith("/patient");
 
-  if (isAdmin) {
-    return <main className="flex-1 min-h-screen bg-slate-900">{children}</main>;
+  if (isInternalPortal) {
+    return <main className="flex-1 min-h-screen">{children}</main>;
   }
 
   return (

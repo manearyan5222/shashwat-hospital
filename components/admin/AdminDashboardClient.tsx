@@ -1,7 +1,15 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { AppointmentRecord, SecondOpinionRecord, RequestStatus, DashboardStats } from "@/types/database";
+import {
+  AppointmentRecord,
+  SecondOpinionRecord,
+  RequestStatus,
+  DashboardStats,
+  StaffRoleRecord,
+  PatientRecord,
+  StaffRole,
+} from "@/types/database";
 import { departmentsData } from "@/data/departments";
 import { doctorsData } from "@/data/doctors";
 import { RequestDetailSlideOver } from "./RequestDetailSlideOver";
@@ -21,31 +29,50 @@ import {
   Building,
   Sparkles,
   ArrowUpDown,
+  Users,
+  UserPlus,
+  ShieldAlert,
+  UserCheck,
+  UserX,
+  Bell,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface AdminDashboardClientProps {
-  initialTab?: "appointments" | "second-opinions";
+  initialTab?: "appointments" | "second-opinions" | "doctors";
+  userRole?: StaffRole;
 }
 
-export function AdminDashboardClient({ initialTab = "appointments" }: AdminDashboardClientProps) {
-  const [activeTab, setActiveTab] = useState<"appointments" | "second-opinions">(initialTab);
+export function AdminDashboardClient({
+  initialTab = "appointments",
+  userRole = "admin",
+}: AdminDashboardClientProps) {
+  const [activeTab, setActiveTab] = useState<"appointments" | "second-opinions" | "doctors">(initialTab);
   const [appointments, setAppointments] = useState<AppointmentRecord[]>([]);
   const [secondOpinions, setSecondOpinions] = useState<SecondOpinionRecord[]>([]);
+  const [doctorsList, setDoctorsList] = useState<StaffRoleRecord[]>([]);
+  const [patientsList, setPatientsList] = useState<PatientRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [newArrivalToast, setNewArrivalToast] = useState<string | null>(null);
 
   // Filters
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<RequestStatus | "all">("all");
   const [departmentFilter, setDepartmentFilter] = useState<string>("all");
+  const [dateRangeFilter, setDateRangeFilter] = useState<"all" | "today" | "week" | "month">("all");
 
   // Selected request for Slide-Over
   const [selectedRequest, setSelectedRequest] = useState<
     ((AppointmentRecord & { type: "appointment" }) | (SecondOpinionRecord & { type: "second-opinion" })) | null
   >(null);
 
-  const fetchData = async () => {
+  // Doctor assignment modal state
+  const [assignModalOpen, setAssignModalOpen] = useState(false);
+  const [selectedDoctorForAssign, setSelectedDoctorForAssign] = useState<string>("");
+  const [selectedPatientForAssign, setSelectedPatientForAssign] = useState<string>("");
+
+  const fetchData = async (isAutoPoll = false) => {
     try {
       const [aptRes, soRes] = await Promise.all([
         fetch("/api/admin/appointments"),
@@ -54,11 +81,26 @@ export function AdminDashboardClient({ initialTab = "appointments" }: AdminDashb
 
       if (aptRes.ok) {
         const aptJson = await aptRes.json();
-        setAppointments(aptJson.data || []);
+        const incomingApts = aptJson.data || [];
+        if (isAutoPoll && incomingApts.length > appointments.length) {
+          setNewArrivalToast(`🔔 New patient request received! (${incomingApts.length - appointments.length} new)`);
+          setTimeout(() => setNewArrivalToast(null), 5000);
+        }
+        setAppointments(incomingApts);
       }
+
       if (soRes.ok) {
         const soJson = await soRes.json();
         setSecondOpinions(soJson.data || []);
+      }
+
+      if (userRole === "admin") {
+        const docRes = await fetch("/api/admin/doctors");
+        if (docRes.ok) {
+          const docJson = await docRes.json();
+          setDoctorsList(docJson.doctors || []);
+          setPatientsList(docJson.patients || []);
+        }
       }
     } catch (err) {
       console.error("Failed to load dashboard requests:", err);
@@ -70,7 +112,14 @@ export function AdminDashboardClient({ initialTab = "appointments" }: AdminDashb
 
   useEffect(() => {
     fetchData();
-  }, []);
+
+    // 30-Second Auto-Polling Loop
+    const interval = setInterval(() => {
+      fetchData(true);
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [userRole]);
 
   const handleRefresh = () => {
     setIsRefreshing(true);
@@ -104,42 +153,53 @@ export function AdminDashboardClient({ initialTab = "appointments" }: AdminDashb
     };
   }, [appointments, secondOpinions]);
 
+  // Date filtering helper
+  const isDateWithinRange = (dateStr: string) => {
+    if (dateRangeFilter === "all") return true;
+    const itemDate = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now.getTime() - itemDate.getTime();
+    const diffHours = diffMs / (1000 * 60 * 60);
+
+    if (dateRangeFilter === "today") return diffHours <= 24;
+    if (dateRangeFilter === "week") return diffHours <= 24 * 7;
+    if (dateRangeFilter === "month") return diffHours <= 24 * 30;
+    return true;
+  };
+
   // Filtered Appointments
   const filteredAppointments = useMemo(() => {
-    return appointments.filter((a) => {
-      const matchesStatus = statusFilter === "all" || a.status === statusFilter;
-      const matchesDept = departmentFilter === "all" || a.department_id === departmentFilter;
-      const query = searchQuery.toLowerCase().trim();
+    return appointments.filter((apt) => {
+      const matchesStatus = statusFilter === "all" || apt.status === statusFilter;
+      const matchesDept = departmentFilter === "all" || apt.department_id === departmentFilter;
       const matchesSearch =
-        !query ||
-        a.patient_name.toLowerCase().includes(query) ||
-        a.patient_phone.includes(query) ||
-        (a.patient_email && a.patient_email.toLowerCase().includes(query)) ||
-        (a.symptoms_description && a.symptoms_description.toLowerCase().includes(query));
+        !searchQuery ||
+        apt.patient_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        apt.patient_phone.includes(searchQuery) ||
+        (apt.patient_email && apt.patient_email.toLowerCase().includes(searchQuery.toLowerCase()));
+      const matchesDate = isDateWithinRange(apt.created_at);
 
-      return matchesStatus && matchesDept && matchesSearch;
+      return matchesStatus && matchesDept && matchesSearch && matchesDate;
     });
-  }, [appointments, statusFilter, departmentFilter, searchQuery]);
+  }, [appointments, statusFilter, departmentFilter, searchQuery, dateRangeFilter]);
 
   // Filtered Second Opinions
   const filteredSecondOpinions = useMemo(() => {
     return secondOpinions.filter((so) => {
       const matchesStatus = statusFilter === "all" || so.status === statusFilter;
-      const matchesDept = departmentFilter === "all" || so.condition_category.toLowerCase().includes(departmentFilter.toLowerCase());
-      const query = searchQuery.toLowerCase().trim();
       const matchesSearch =
-        !query ||
-        so.patient_name.toLowerCase().includes(query) ||
-        so.patient_phone.includes(query) ||
-        (so.patient_email && so.patient_email.toLowerCase().includes(query)) ||
-        (so.prior_diagnosis && so.prior_diagnosis.toLowerCase().includes(query)) ||
-        (so.reports_summary && so.reports_summary.toLowerCase().includes(query));
+        !searchQuery ||
+        so.patient_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        so.patient_phone.includes(searchQuery) ||
+        (so.patient_email && so.patient_email.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        so.condition_category.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesDate = isDateWithinRange(so.created_at);
 
-      return matchesStatus && matchesDept && matchesSearch;
+      return matchesStatus && matchesSearch && matchesDate;
     });
-  }, [secondOpinions, statusFilter, departmentFilter, searchQuery]);
+  }, [secondOpinions, statusFilter, searchQuery, dateRangeFilter]);
 
-  // Handle updating status & staff notes from Slide-Over
+  // Status update callback from Slide-Over
   const handleUpdateStatus = async (
     id: string,
     type: "appointment" | "second-opinion",
@@ -147,6 +207,7 @@ export function AdminDashboardClient({ initialTab = "appointments" }: AdminDashb
     notes?: string
   ) => {
     const endpoint = type === "appointment" ? "/api/admin/appointments" : "/api/admin/second-opinions";
+
     const res = await fetch(endpoint, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -156,76 +217,31 @@ export function AdminDashboardClient({ initialTab = "appointments" }: AdminDashb
     if (res.ok) {
       if (type === "appointment") {
         setAppointments((prev) =>
-          prev.map((item) => (item.id === id ? { ...item, status: newStatus, staff_notes: notes } : item))
+          prev.map((a) => (a.id === id ? { ...a, status: newStatus, staff_notes: notes ?? a.staff_notes } : a))
         );
       } else {
         setSecondOpinions((prev) =>
-          prev.map((item) => (item.id === id ? { ...item, status: newStatus, staff_notes: notes } : item))
+          prev.map((so) => (so.id === id ? { ...so, status: newStatus, staff_notes: notes ?? so.staff_notes } : so))
         );
-      }
-      if (selectedRequest && selectedRequest.id === id) {
-        setSelectedRequest((prev) => (prev ? { ...prev, status: newStatus, staff_notes: notes } : null));
       }
     }
   };
 
-  // Relative time helper
-  const getRelativeTime = (isoString: string) => {
-    const date = new Date(isoString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / (1000 * 60));
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-    if (diffMins < 1) return "Just now";
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays === 1) return "Yesterday";
-    if (diffDays < 7) return `${diffDays}d ago`;
-    return date.toLocaleDateString("en-IN", { month: "short", day: "numeric" });
-  };
-
-  // CSV Export
+  // CSV Export handler
   const handleExportCSV = () => {
-    const isAppt = activeTab === "appointments";
-    const items = isAppt ? filteredAppointments : filteredSecondOpinions;
-    if (items.length === 0) return;
+    let csvContent = "data:text/csv;charset=utf-8,";
+    if (activeTab === "appointments") {
+      csvContent += "ID,Patient Name,Phone,Email,Department,Doctor,Requested Date,Time Slot,Status,Submitted At\n";
+      filteredAppointments.forEach((a) => {
+        csvContent += `"${a.id}","${a.patient_name}","${a.patient_phone}","${a.patient_email || ""}","${a.department_id}","${a.doctor_id || ""}","${a.preferred_date}","${a.preferred_time}","${a.status}","${a.created_at}"\n`;
+      });
+    } else {
+      csvContent += "ID,Patient Name,Phone,Email,Condition Category,Prior Diagnosis,Status,Submitted At\n";
+      filteredSecondOpinions.forEach((so) => {
+        csvContent += `"${so.id}","${so.patient_name}","${so.patient_phone}","${so.patient_email || ""}","${so.condition_category}","${(so.prior_diagnosis || "").replace(/"/g, '""')}","${so.status}","${so.created_at}"\n`;
+      });
+    }
 
-    const headers = isAppt
-      ? ["ID", "Patient Name", "Phone", "Email", "Department", "Doctor ID", "Preferred Date", "Preferred Time", "Status", "Staff Notes", "Created At"]
-      : ["ID", "Patient Name", "Phone", "Email", "Condition Category", "Prior Diagnosis", "Reports Summary", "Status", "Staff Notes", "Created At"];
-
-    const rows = items.map((item: any) =>
-      isAppt
-        ? [
-            item.id,
-            `"${item.patient_name.replace(/"/g, '""')}"`,
-            item.patient_phone,
-            item.patient_email || "",
-            item.department_id,
-            item.doctor_id || "",
-            item.preferred_date,
-            item.preferred_time,
-            item.status,
-            `"${(item.staff_notes || "").replace(/"/g, '""')}"`,
-            item.created_at,
-          ]
-        : [
-            item.id,
-            `"${item.patient_name.replace(/"/g, '""')}"`,
-            item.patient_phone,
-            item.patient_email || "",
-            `"${item.condition_category.replace(/"/g, '""')}"`,
-            `"${(item.prior_diagnosis || "").replace(/"/g, '""')}"`,
-            `"${(item.reports_summary || "").replace(/"/g, '""')}"`,
-            item.status,
-            `"${(item.staff_notes || "").replace(/"/g, '""')}"`,
-            item.created_at,
-          ]
-    );
-
-    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
@@ -235,19 +251,106 @@ export function AdminDashboardClient({ initialTab = "appointments" }: AdminDashb
     document.body.removeChild(link);
   };
 
-  const currentList = activeTab === "appointments" ? filteredAppointments : filteredSecondOpinions;
+  const handleAssignDoctor = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedDoctorForAssign || !selectedPatientForAssign) return;
+
+    try {
+      const res = await fetch("/api/admin/doctors", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "assign",
+          doctorId: selectedDoctorForAssign,
+          patientId: selectedPatientForAssign,
+        }),
+      });
+
+      if (res.ok) {
+        setAssignModalOpen(false);
+        fetchData();
+      }
+    } catch (err) {
+      console.error("Assign error:", err);
+    }
+  };
+
+  const getRelativeTime = (timestamp: string) => {
+    const diff = Date.now() - new Date(timestamp).getTime();
+    const mins = Math.floor(diff / (1000 * 60));
+    const hours = Math.floor(mins / 60);
+    const days = Math.floor(hours / 24);
+
+    if (mins < 1) return "Just now";
+    if (mins < 60) return `${mins}m ago`;
+    if (hours < 24) return `${hours}h ago`;
+    return `${days}d ago`;
+  };
 
   return (
-    <div className="flex-1 min-w-0 bg-slate-50/50 min-h-screen">
-      {/* Top Header Bar */}
-      <header className="bg-white border-b border-slate-200 px-6 sm:px-8 py-4 sticky top-0 z-30 flex items-center justify-between shadow-xs">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-heading font-extrabold text-navy-950 tracking-tight">
-            Patient Request Triage
-          </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Real-time outpatient consultation & second opinion management
-          </p>
+    <div className="flex-1 min-h-screen bg-slate-900 text-slate-100 flex flex-col">
+      {/* Toast Alert for Auto-Polling */}
+      {newArrivalToast && (
+        <div className="fixed top-4 right-6 z-50 p-4 rounded-2xl bg-teal-600 text-white shadow-2xl font-bold text-sm flex items-center gap-2.5 animate-in slide-in-from-top duration-300">
+          <Bell className="w-5 h-5 text-teal-200 animate-bounce" />
+          <span>{newArrivalToast}</span>
+        </div>
+      )}
+
+      {/* Top Bar Header */}
+      <header className="h-16 px-8 bg-slate-900/80 backdrop-blur-md border-b border-slate-800 flex items-center justify-between sticky top-0 z-20">
+        <div className="flex items-center gap-4">
+          <div className="flex bg-slate-800/90 p-1 rounded-xl border border-slate-700/80">
+            <button
+              type="button"
+              onClick={() => setActiveTab("appointments")}
+              className={cn(
+                "px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2",
+                activeTab === "appointments"
+                  ? "bg-teal-600 text-white shadow"
+                  : "text-slate-400 hover:text-white"
+              )}
+            >
+              <Calendar className="w-3.5 h-3.5" />
+              <span>Appointments</span>
+              <span className="px-1.5 py-0.2 rounded-full bg-slate-900 text-[10px] text-teal-300">
+                {appointments.length}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab("second-opinions")}
+              className={cn(
+                "px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2",
+                activeTab === "second-opinions"
+                  ? "bg-teal-600 text-white shadow"
+                  : "text-slate-400 hover:text-white"
+              )}
+            >
+              <FileText className="w-3.5 h-3.5" />
+              <span>Second Opinions</span>
+              <span className="px-1.5 py-0.2 rounded-full bg-slate-900 text-[10px] text-teal-300">
+                {secondOpinions.length}
+              </span>
+            </button>
+
+            {userRole === "admin" && (
+              <button
+                type="button"
+                onClick={() => setActiveTab("doctors")}
+                className={cn(
+                  "px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2",
+                  activeTab === "doctors"
+                    ? "bg-teal-600 text-white shadow"
+                    : "text-slate-400 hover:text-white"
+                )}
+              >
+                <Users className="w-3.5 h-3.5" />
+                <span>Doctor Management</span>
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="flex items-center gap-3">
@@ -255,395 +358,397 @@ export function AdminDashboardClient({ initialTab = "appointments" }: AdminDashb
             type="button"
             onClick={handleRefresh}
             disabled={isRefreshing}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold shadow-xs transition-colors"
+            className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition-all"
+            title="Auto-polls every 30s. Click to refresh immediately"
           >
-            <RefreshCw className={cn("w-3.5 h-3.5 text-slate-500", isRefreshing && "animate-spin")} />
-            <span>{isRefreshing ? "Refreshing..." : "Refresh"}</span>
+            <RefreshCw className={cn("w-4 h-4", isRefreshing && "animate-spin text-teal-400")} />
           </button>
 
-          <button
-            type="button"
-            onClick={handleExportCSV}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-navy-900 hover:bg-navy-800 text-white text-xs font-semibold shadow-xs transition-colors"
-          >
-            <Download className="w-3.5 h-3.5 text-teal-300" />
-            <span>Export CSV</span>
-          </button>
+          {activeTab !== "doctors" && (
+            <button
+              type="button"
+              onClick={handleExportCSV}
+              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs border border-slate-700 transition-all"
+            >
+              <Download className="w-4 h-4 text-teal-400" />
+              <span>Export CSV</span>
+            </button>
+          )}
         </div>
       </header>
 
-      <main className="p-6 sm:p-8 space-y-6 max-w-7xl mx-auto">
+      {/* Main Content Area */}
+      <main className="flex-1 p-8 space-y-6 max-w-7xl mx-auto w-full">
         {/* Metric Summary Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="p-5 rounded-2xl bg-white border border-slate-200/80 shadow-card">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                New Unreviewed
-              </span>
-              <span className="p-2 rounded-xl bg-blue-50 text-blue-700">
-                <AlertCircle className="w-4 h-4 animate-pulse" />
-              </span>
+        {activeTab !== "doctors" && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-slate-800/60 border border-slate-700/60 p-5 rounded-2xl flex items-center justify-between shadow-sm">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Total Requests</p>
+                <p className="text-2xl font-extrabold text-white mt-1">
+                  {activeTab === "appointments" ? stats.totalAppointments : stats.totalSecondOpinions}
+                </p>
+              </div>
+              <div className="w-11 h-11 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-400">
+                {activeTab === "appointments" ? <Calendar className="w-5 h-5" /> : <FileText className="w-5 h-5" />}
+              </div>
             </div>
-            <div className="mt-3 flex items-baseline gap-2">
-              <span className="text-2xl sm:text-3xl font-heading font-extrabold text-navy-950">
-                {stats.newAppointments + stats.newSecondOpinions}
-              </span>
-              <span className="text-xs font-semibold text-blue-600">Needs Intake</span>
+
+            <div className="bg-slate-800/60 border border-slate-700/60 p-5 rounded-2xl flex items-center justify-between shadow-sm">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-blue-400">New (Action Required)</p>
+                <p className="text-2xl font-extrabold text-blue-300 mt-1">
+                  {activeTab === "appointments" ? stats.newAppointments : stats.newSecondOpinions}
+                </p>
+              </div>
+              <div className="w-11 h-11 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
+                <Sparkles className="w-5 h-5" />
+              </div>
             </div>
-            <div className="text-[11px] text-slate-400 mt-1">
-              {stats.newAppointments} Appointments · {stats.newSecondOpinions} Second Opinions
+
+            <div className="bg-slate-800/60 border border-slate-700/60 p-5 rounded-2xl flex items-center justify-between shadow-sm">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-amber-400">Under Contact</p>
+                <p className="text-2xl font-extrabold text-amber-300 mt-1">{stats.contactedCount}</p>
+              </div>
+              <div className="w-11 h-11 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+                <Clock className="w-5 h-5" />
+              </div>
+            </div>
+
+            <div className="bg-slate-800/60 border border-slate-700/60 p-5 rounded-2xl flex items-center justify-between shadow-sm">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-emerald-400">Confirmed / Scheduled</p>
+                <p className="text-2xl font-extrabold text-emerald-300 mt-1">{stats.confirmedCount}</p>
+              </div>
+              <div className="w-11 h-11 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                <CheckCircle2 className="w-5 h-5" />
+              </div>
             </div>
           </div>
+        )}
 
-          <div className="p-5 rounded-2xl bg-white border border-slate-200/80 shadow-card">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                Contacted
-              </span>
-              <span className="p-2 rounded-xl bg-amber-50 text-amber-700">
-                <Phone className="w-4 h-4" />
-              </span>
-            </div>
-            <div className="mt-3 flex items-baseline gap-2">
-              <span className="text-2xl sm:text-3xl font-heading font-extrabold text-navy-950">
-                {stats.contactedCount}
-              </span>
-              <span className="text-xs font-semibold text-amber-600">In Progress</span>
-            </div>
-            <div className="text-[11px] text-slate-400 mt-1">
-              Follow-ups & Scan Verifications
-            </div>
-          </div>
+        {/* TAB 1 & 2: INTAKE REQUESTS (APPOINTMENTS & SECOND OPINIONS) */}
+        {activeTab !== "doctors" && (
+          <div className="space-y-4">
+            {/* Filter & Search Toolbar */}
+            <div className="bg-slate-800/80 border border-slate-700/80 p-4 rounded-2xl flex flex-wrap items-center justify-between gap-4">
+              <div className="flex-1 min-w-[240px] relative">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  type="text"
+                  placeholder="Search by patient name, mobile number, or email..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white placeholder-slate-500 text-xs focus:outline-none focus:ring-2 focus:ring-teal-500"
+                />
+              </div>
 
-          <div className="p-5 rounded-2xl bg-white border border-slate-200/80 shadow-card">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                Confirmed
-              </span>
-              <span className="p-2 rounded-xl bg-emerald-50 text-emerald-700">
-                <CheckCircle2 className="w-4 h-4" />
-              </span>
-            </div>
-            <div className="mt-3 flex items-baseline gap-2">
-              <span className="text-2xl sm:text-3xl font-heading font-extrabold text-navy-950">
-                {stats.confirmedCount}
-              </span>
-              <span className="text-xs font-semibold text-emerald-600">Scheduled</span>
-            </div>
-            <div className="text-[11px] text-slate-400 mt-1">
-              OPD Slots Finalized
-            </div>
-          </div>
+              <div className="flex items-center gap-3">
+                {/* Status Filter */}
+                <div className="flex items-center gap-2">
+                  <Filter className="w-3.5 h-3.5 text-slate-400" />
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value as RequestStatus | "all")}
+                    className="py-2 px-3 rounded-xl bg-slate-900 border border-slate-700 text-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-teal-500 font-medium"
+                  >
+                    <option value="all">All Statuses</option>
+                    <option value="new">🔵 New</option>
+                    <option value="contacted">🟡 Contacted</option>
+                    <option value="confirmed">🟢 Confirmed</option>
+                    <option value="closed">⚪ Closed</option>
+                  </select>
+                </div>
 
-          <div className="p-5 rounded-2xl bg-white border border-slate-200/80 shadow-card">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                Total Submissions
-              </span>
-              <span className="p-2 rounded-xl bg-slate-100 text-slate-700">
-                <Calendar className="w-4 h-4" />
-              </span>
-            </div>
-            <div className="mt-3 flex items-baseline gap-2">
-              <span className="text-2xl sm:text-3xl font-heading font-extrabold text-navy-950">
-                {stats.totalAppointments + stats.totalSecondOpinions}
-              </span>
-              <span className="text-xs font-semibold text-slate-500">All Time</span>
-            </div>
-            <div className="text-[11px] text-slate-400 mt-1">
-              {stats.closedCount} Closed / Archive
-            </div>
-          </div>
-        </div>
-
-        {/* Tab Selection Bar */}
-        <div className="flex items-center gap-3 border-b border-slate-200 pb-2">
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTab("appointments");
-              setStatusFilter("all");
-            }}
-            className={cn(
-              "px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2",
-              activeTab === "appointments"
-                ? "bg-navy-900 text-white shadow-sm"
-                : "bg-white text-slate-600 hover:text-navy-950 hover:bg-slate-100 border border-slate-200"
-            )}
-          >
-            <Calendar className="w-4 h-4 text-teal-300" />
-            <span>Appointments</span>
-            <span
-              className={cn(
-                "px-2 py-0.5 rounded-full text-[11px] font-extrabold",
-                activeTab === "appointments" ? "bg-teal-500 text-navy-950" : "bg-slate-100 text-slate-700"
-              )}
-            >
-              {appointments.length}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTab("second-opinions");
-              setStatusFilter("all");
-            }}
-            className={cn(
-              "px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2",
-              activeTab === "second-opinions"
-                ? "bg-navy-900 text-white shadow-sm"
-                : "bg-white text-slate-600 hover:text-navy-950 hover:bg-slate-100 border border-slate-200"
-            )}
-          >
-            <FileText className="w-4 h-4 text-teal-300" />
-            <span>Second Opinions</span>
-            <span
-              className={cn(
-                "px-2 py-0.5 rounded-full text-[11px] font-extrabold",
-                activeTab === "second-opinions" ? "bg-teal-500 text-navy-950" : "bg-slate-100 text-slate-700"
-              )}
-            >
-              {secondOpinions.length}
-            </span>
-          </button>
-        </div>
-
-        {/* Filter Toolbar */}
-        <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-card space-y-3">
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
-            {/* Search Box */}
-            <div className="md:col-span-5 relative">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-              <input
-                type="text"
-                placeholder="Search patient name, phone number, email..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-teal-700 text-navy-950"
-              />
-            </div>
-
-            {/* Department / Category Filter */}
-            <div className="md:col-span-4">
-              <select
-                value={departmentFilter}
-                onChange={(e) => setDepartmentFilter(e.target.value)}
-                className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-teal-700 bg-white text-navy-950"
-              >
-                <option value="all">All Departments / Categories</option>
-                {activeTab === "appointments" ? (
-                  departmentsData.map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {d.title}
-                    </option>
-                  ))
-                ) : (
-                  <>
-                    <option value="Knee">Knee / Joint Replacement</option>
-                    <option value="Hip">Hip Replacement / AVN</option>
-                    <option value="Arthroscopy">Arthroscopy / Sports Injury</option>
-                    <option value="Spine">Spine Surgery / Slipped Disc</option>
-                    <option value="Fracture">Complex Fracture</option>
-                  </>
-                )}
-              </select>
-            </div>
-
-            {/* Status Tabs in toolbar */}
-            <div className="md:col-span-3 flex items-center gap-1 overflow-x-auto">
-              {(["all", "new", "contacted", "confirmed", "closed"] as const).map((st) => (
-                <button
-                  key={st}
-                  type="button"
-                  onClick={() => setStatusFilter(st)}
-                  className={cn(
-                    "px-2.5 py-1.5 rounded-lg text-xs font-semibold capitalize whitespace-nowrap transition-colors",
-                    statusFilter === st
-                      ? "bg-slate-900 text-white"
-                      : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                  )}
+                {/* Date Range Filter */}
+                <select
+                  value={dateRangeFilter}
+                  onChange={(e) => setDateRangeFilter(e.target.value as "all" | "today" | "week" | "month")}
+                  className="py-2 px-3 rounded-xl bg-slate-900 border border-slate-700 text-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-teal-500 font-medium"
                 >
-                  {st}
-                </button>
+                  <option value="all">All Dates</option>
+                  <option value="today">Today (Last 24h)</option>
+                  <option value="week">Past 7 Days</option>
+                  <option value="month">Past 30 Days</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Table Container */}
+            <div className="bg-slate-800/80 border border-slate-700/80 rounded-2xl overflow-hidden shadow-xl">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs text-slate-300">
+                  <thead className="bg-slate-900/90 text-[11px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-700">
+                    <tr>
+                      <th className="py-3.5 px-6">Patient Details</th>
+                      <th className="py-3.5 px-6">
+                        {activeTab === "appointments" ? "Requested Department & Doctor" : "Condition / Diagnosis"}
+                      </th>
+                      <th className="py-3.5 px-6">
+                        {activeTab === "appointments" ? "Preferred Slot" : "Case Status"}
+                      </th>
+                      <th className="py-3.5 px-6">Status</th>
+                      <th className="py-3.5 px-6">Submitted</th>
+                      <th className="py-3.5 px-6 text-right">Actions</th>
+                    </tr>
+                  </thead>
+
+                  <tbody className="divide-y divide-slate-700/60 font-sans">
+                    {activeTab === "appointments" ? (
+                      filteredAppointments.length > 0 ? (
+                        filteredAppointments.map((apt) => {
+                          const isNew = apt.status === "new";
+                          return (
+                            <tr
+                              key={apt.id}
+                              onClick={() => setSelectedRequest({ ...apt, type: "appointment" })}
+                              className={cn(
+                                "hover:bg-slate-750/70 transition-colors cursor-pointer group",
+                                isNew ? "bg-slate-800/90 border-l-4 border-l-blue-500 font-semibold text-white" : ""
+                              )}
+                            >
+                              <td className="py-4 px-6">
+                                <div className="font-bold text-white group-hover:text-teal-300 transition-colors">
+                                  {apt.patient_name}
+                                </div>
+                                <div className="text-[11px] text-slate-400 font-mono mt-0.5">{apt.patient_phone}</div>
+                              </td>
+
+                              <td className="py-4 px-6">
+                                <div className="font-medium text-slate-200">{apt.department_id}</div>
+                                <div className="text-[11px] text-slate-400">{apt.doctor_id || "Any Available"}</div>
+                              </td>
+
+                              <td className="py-4 px-6">
+                                <div className="text-slate-200">{apt.preferred_date}</div>
+                                <div className="text-[11px] text-slate-400">{apt.preferred_time}</div>
+                              </td>
+
+                              <td className="py-4 px-6">
+                                <span
+                                  className={cn(
+                                    "px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border",
+                                    apt.status === "new" && "bg-blue-500/10 text-blue-400 border-blue-500/30",
+                                    apt.status === "contacted" && "bg-amber-500/10 text-amber-400 border-amber-500/30",
+                                    apt.status === "confirmed" && "bg-emerald-500/10 text-emerald-400 border-emerald-500/30",
+                                    apt.status === "closed" && "bg-slate-700 text-slate-400 border-slate-600"
+                                  )}
+                                >
+                                  {apt.status}
+                                </span>
+                              </td>
+
+                              <td className="py-4 px-6 text-slate-400">{getRelativeTime(apt.created_at)}</td>
+
+                              <td className="py-4 px-6 text-right">
+                                <span className="inline-flex items-center gap-1 text-teal-400 font-bold group-hover:translate-x-0.5 transition-transform">
+                                  <span>Review</span>
+                                  <ChevronRight className="w-3.5 h-3.5" />
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      ) : (
+                        <tr>
+                          <td colSpan={6} className="py-12 text-center text-slate-400">
+                            No appointments found matching your filters.
+                          </td>
+                        </tr>
+                      )
+                    ) : filteredSecondOpinions.length > 0 ? (
+                      filteredSecondOpinions.map((so) => {
+                        const isNew = so.status === "new";
+                        return (
+                          <tr
+                            key={so.id}
+                            onClick={() => setSelectedRequest({ ...so, type: "second-opinion" })}
+                            className={cn(
+                              "hover:bg-slate-750/70 transition-colors cursor-pointer group",
+                              isNew ? "bg-slate-800/90 border-l-4 border-l-blue-500 font-semibold text-white" : ""
+                            )}
+                          >
+                            <td className="py-4 px-6">
+                              <div className="font-bold text-white group-hover:text-teal-300 transition-colors">
+                                {so.patient_name}
+                              </div>
+                              <div className="text-[11px] text-slate-400 font-mono mt-0.5">{so.patient_phone}</div>
+                            </td>
+
+                            <td className="py-4 px-6">
+                              <div className="font-medium text-teal-300">{so.condition_category}</div>
+                              <div className="text-[11px] text-slate-400 truncate max-w-xs">{so.prior_diagnosis || "No prior diagnosis"}</div>
+                            </td>
+
+                            <td className="py-4 px-6">
+                              <div className="text-slate-300 truncate max-w-xs">{so.reports_summary || "Scans available"}</div>
+                            </td>
+
+                            <td className="py-4 px-6">
+                              <span
+                                className={cn(
+                                  "px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border",
+                                  so.status === "new" && "bg-blue-500/10 text-blue-400 border-blue-500/30",
+                                  so.status === "contacted" && "bg-amber-500/10 text-amber-400 border-amber-500/30",
+                                  so.status === "confirmed" && "bg-emerald-500/10 text-emerald-400 border-emerald-500/30",
+                                  so.status === "closed" && "bg-slate-700 text-slate-400 border-slate-600"
+                                )}
+                              >
+                                {so.status}
+                              </span>
+                            </td>
+
+                            <td className="py-4 px-6 text-slate-400">{getRelativeTime(so.created_at)}</td>
+
+                            <td className="py-4 px-6 text-right">
+                              <span className="inline-flex items-center gap-1 text-teal-400 font-bold group-hover:translate-x-0.5 transition-transform">
+                                <span>Review</span>
+                                <ChevronRight className="w-3.5 h-3.5" />
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    ) : (
+                      <tr>
+                        <td colSpan={6} className="py-12 text-center text-slate-400">
+                          No second-opinion requests found matching your filters.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 3: DOCTOR MANAGEMENT & PATIENT ACCESS (ADMIN ONLY) */}
+        {activeTab === "doctors" && userRole === "admin" && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-heading font-bold text-white">Hospital Medical Staff & Patient Access</h2>
+                <p className="text-xs text-slate-400">
+                  Assign patient clinical records to treating doctors for mobile PWA access.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setAssignModalOpen(true)}
+                className="px-4 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-bold text-xs shadow-lg shadow-teal-950/40 flex items-center gap-2 transition-all"
+              >
+                <UserPlus className="w-4 h-4" />
+                <span>Assign Doctor to Patient</span>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {doctorsList.map((doc) => (
+                <div
+                  key={doc.user_id}
+                  className="bg-slate-800/80 border border-slate-700/80 p-5 rounded-2xl space-y-4 shadow-xl"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-cyan-600/20 border border-cyan-500/30 flex items-center justify-center text-cyan-300 font-bold text-sm">
+                        Dr
+                      </div>
+                      <div>
+                        <div className="font-bold text-white text-sm">{doc.full_name}</div>
+                        <div className="text-[11px] text-slate-400">{doc.email}</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 text-xs space-y-1">
+                    <div className="text-slate-400 font-medium">Role: Treating Consultant</div>
+                    <div className="text-teal-400 font-semibold flex items-center gap-1">
+                      <UserCheck className="w-3.5 h-3.5" />
+                      <span>Doctor PWA Active</span>
+                    </div>
+                  </div>
+                </div>
               ))}
             </div>
           </div>
-        </div>
-
-        {/* Request Table Component */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-card overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider">
-                  <th className="py-3.5 px-4">Patient Name</th>
-                  <th className="py-3.5 px-4">Contact Phone</th>
-                  <th className="py-3.5 px-4">
-                    {activeTab === "appointments" ? "Requested Date & Time" : "Condition Category"}
-                  </th>
-                  <th className="py-3.5 px-4">
-                    {activeTab === "appointments" ? "Department / Doctor" : "Prior Advised Surgery"}
-                  </th>
-                  <th className="py-3.5 px-4">Status</th>
-                  <th className="py-3.5 px-4">Submitted</th>
-                  <th className="py-3.5 px-4 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 text-slate-700">
-                {isLoading ? (
-                  <tr>
-                    <td colSpan={7} className="py-12 text-center text-slate-400">
-                      Loading patient requests...
-                    </td>
-                  </tr>
-                ) : currentList.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="py-12 text-center text-slate-400 space-y-2">
-                      <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
-                        <Search className="w-5 h-5" />
-                      </div>
-                      <p className="font-semibold text-slate-600">No matching requests found.</p>
-                      <p className="text-[11px] text-slate-400">Try clearing filters or search terms.</p>
-                    </td>
-                  </tr>
-                ) : (
-                  currentList.map((item: any) => {
-                    const isAppt = activeTab === "appointments";
-                    const dept = isAppt ? departmentsData.find((d) => d.id === item.department_id) : null;
-                    const doc = isAppt && item.doctor_id ? doctorsData.find((d) => d.id === item.doctor_id) : null;
-
-                    return (
-                      <tr
-                        key={item.id}
-                        onClick={() =>
-                          setSelectedRequest({
-                            ...item,
-                            type: isAppt ? "appointment" : "second-opinion",
-                          })
-                        }
-                        className="hover:bg-teal-50/40 cursor-pointer transition-colors group"
-                      >
-                        {/* Patient Name */}
-                        <td className="py-3.5 px-4">
-                          <div className="font-bold text-navy-950 group-hover:text-teal-900 transition-colors">
-                            {item.patient_name}
-                          </div>
-                          {item.patient_email && (
-                            <div className="text-[11px] text-slate-400 truncate max-w-[160px]">
-                              {item.patient_email}
-                            </div>
-                          )}
-                        </td>
-
-                        {/* Phone */}
-                        <td className="py-3.5 px-4 font-mono font-medium text-slate-800">
-                          {item.patient_phone}
-                        </td>
-
-                        {/* Requested Date/Time or Category */}
-                        <td className="py-3.5 px-4">
-                          {isAppt ? (
-                            <div>
-                              <div className="font-semibold text-navy-900">{item.preferred_date}</div>
-                              <div className="text-[11px] text-slate-500">{item.preferred_time}</div>
-                            </div>
-                          ) : (
-                            <span className="font-semibold text-teal-900 bg-teal-50 px-2 py-0.5 rounded border border-teal-100 inline-block">
-                              {item.condition_category}
-                            </span>
-                          )}
-                        </td>
-
-                        {/* Department / Specialist / Prior Diagnosis */}
-                        <td className="py-3.5 px-4 max-w-[200px] truncate">
-                          {isAppt ? (
-                            <div>
-                              <span className="font-medium text-slate-800 block truncate">
-                                {dept?.title || item.department_id}
-                              </span>
-                              <span className="text-[11px] text-slate-400 block truncate">
-                                {doc ? `${doc.salutation} ${doc.name}` : "Any Consultant"}
-                              </span>
-                            </div>
-                          ) : (
-                            <span className="text-slate-600 block truncate">
-                              {item.prior_diagnosis || item.reports_summary || "Clinical scan evaluation"}
-                            </span>
-                          )}
-                        </td>
-
-                        {/* Status Badge */}
-                        <td className="py-3.5 px-4">
-                          <span
-                            className={cn(
-                              "px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider border inline-flex items-center gap-1",
-                              item.status === "new" && "bg-blue-50 text-blue-700 border-blue-200",
-                              item.status === "contacted" && "bg-amber-50 text-amber-700 border-amber-200",
-                              item.status === "confirmed" && "bg-emerald-50 text-emerald-700 border-emerald-200",
-                              item.status === "closed" && "bg-slate-100 text-slate-600 border-slate-200"
-                            )}
-                          >
-                            <span
-                              className={cn(
-                                "w-1.5 h-1.5 rounded-full",
-                                item.status === "new" && "bg-blue-500 animate-pulse",
-                                item.status === "contacted" && "bg-amber-500",
-                                item.status === "confirmed" && "bg-emerald-500",
-                                item.status === "closed" && "bg-slate-400"
-                              )}
-                            />
-                            {item.status}
-                          </span>
-                        </td>
-
-                        {/* Relative Time */}
-                        <td className="py-3.5 px-4 text-slate-500 whitespace-nowrap">
-                          {getRelativeTime(item.created_at)}
-                        </td>
-
-                        {/* Action Column */}
-                        <td className="py-3.5 px-4 text-right whitespace-nowrap">
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedRequest({
-                                ...item,
-                                type: isAppt ? "appointment" : "second-opinion",
-                              });
-                            }}
-                            className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-navy-900 hover:text-white text-slate-700 text-xs font-semibold transition-all"
-                          >
-                            Review & Triage →
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="p-4 bg-slate-50 border-t border-slate-200 text-xs text-slate-500 flex items-center justify-between">
-            <span>
-              Showing {currentList.length} of {activeTab === "appointments" ? appointments.length : secondOpinions.length} {activeTab}
-            </span>
-            <span className="text-[11px] text-slate-400">
-              Click any row to open full patient details & record staff notes
-            </span>
-          </div>
-        </div>
+        )}
       </main>
 
-      {/* Detail Slide-Over Panel */}
+      {/* Slide-Over Panel for Details */}
       <RequestDetailSlideOver
         request={selectedRequest}
         isOpen={!!selectedRequest}
         onClose={() => setSelectedRequest(null)}
         onUpdateStatus={handleUpdateStatus}
       />
+
+      {/* Doctor Assignment Modal */}
+      {assignModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-700 p-6 rounded-3xl max-w-md w-full shadow-2xl space-y-5 animate-in fade-in zoom-in duration-200">
+            <h3 className="text-base font-bold text-white">Assign Patient to Consultant</h3>
+
+            <form onSubmit={handleAssignDoctor} className="space-y-4 text-xs">
+              <div>
+                <label className="block font-bold text-slate-300 mb-1.5 uppercase tracking-wider text-[11px]">
+                  Select Treating Doctor
+                </label>
+                <select
+                  required
+                  value={selectedDoctorForAssign}
+                  onChange={(e) => setSelectedDoctorForAssign(e.target.value)}
+                  className="w-full p-3 rounded-xl bg-slate-800 border border-slate-700 text-white font-medium focus:ring-2 focus:ring-teal-500"
+                >
+                  <option value="">Choose a Doctor...</option>
+                  {doctorsList.map((d) => (
+                    <option key={d.user_id} value={d.user_id}>
+                      {d.full_name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-300 mb-1.5 uppercase tracking-wider text-[11px]">
+                  Select Patient Record
+                </label>
+                <select
+                  required
+                  value={selectedPatientForAssign}
+                  onChange={(e) => setSelectedPatientForAssign(e.target.value)}
+                  className="w-full p-3 rounded-xl bg-slate-800 border border-slate-700 text-white font-medium focus:ring-2 focus:ring-teal-500"
+                >
+                  <option value="">Choose a Patient...</option>
+                  {patientsList.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.full_name} ({p.phone})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-3">
+                <button
+                  type="button"
+                  onClick={() => setAssignModalOpen(false)}
+                  className="px-4 py-2 rounded-xl border border-slate-700 text-slate-400 hover:text-white"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-bold"
+                >
+                  Confirm Assignment
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
