@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getAuthenticatedDoctor } from "@/lib/supabase/auth-helper";
 import {
   createTreatmentNote,
   createTreatmentAmendment,
@@ -6,17 +7,30 @@ import {
 import { logAuditEvent } from "@/lib/audit";
 import { secureLog } from "@/lib/security";
 
+export const dynamic = "force-dynamic";
+
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const { isAmendment, originalNoteId, visitId, doctorId, doctorName, noteText } = body;
-
-    if (!visitId || !doctorId || !noteText || typeof noteText !== "string" || noteText.trim().length < 3) {
+    const doctorAuth = await getAuthenticatedDoctor(request);
+    if (!doctorAuth) {
       return NextResponse.json(
-        { message: "Visit ID, Doctor ID, and valid note text are required." },
+        { message: "Doctor authentication required to record clinical notes." },
+        { status: 401 }
+      );
+    }
+
+    const body = await request.json();
+    const { isAmendment, originalNoteId, visitId, noteText } = body;
+
+    if (!visitId || !noteText || typeof noteText !== "string" || noteText.trim().length < 3) {
+      return NextResponse.json(
+        { message: "Valid Visit ID and note content are required." },
         { status: 400 }
       );
     }
+
+    const doctorId = doctorAuth.doctorId;
+    const doctorName = doctorAuth.doctorName;
 
     let result;
     if (isAmendment && originalNoteId) {
@@ -24,7 +38,7 @@ export async function POST(request: Request) {
         originalNoteId,
         visitId,
         doctorId,
-        doctorName || "Treating Consultant",
+        doctorName,
         noteText.trim()
       );
       await logAuditEvent({
@@ -37,7 +51,7 @@ export async function POST(request: Request) {
       result = await createTreatmentNote({
         visit_id: visitId,
         doctor_id: doctorId,
-        doctor_name: doctorName || "Treating Consultant",
+        doctor_name: doctorName,
         note_text: noteText.trim(),
       });
       await logAuditEvent({

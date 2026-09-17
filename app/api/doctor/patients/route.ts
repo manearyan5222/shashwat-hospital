@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getAuthenticatedDoctor } from "@/lib/supabase/auth-helper";
 import { getAssignedPatientsForDoctor, getAppointments } from "@/lib/supabase/service";
 import { secureLog } from "@/lib/security";
 
@@ -6,9 +7,15 @@ export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   try {
-    const { searchParams } = new URL(request.url);
-    const doctorId = searchParams.get("doctorId") || "doc-joint-1"; // Default to logged in doctor
+    const doctorAuth = await getAuthenticatedDoctor(request);
+    if (!doctorAuth) {
+      return NextResponse.json(
+        { message: "Doctor authentication required." },
+        { status: 401 }
+      );
+    }
 
+    const doctorId = doctorAuth.doctorId;
     const patients = await getAssignedPatientsForDoctor(doctorId);
     const appointments = await getAppointments();
     const doctorAppointments = appointments.filter((a) => a.doctor_id === doctorId || !a.doctor_id);

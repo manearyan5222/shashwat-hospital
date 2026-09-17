@@ -35,20 +35,20 @@ export default function PatientDashboardPage() {
   useEffect(() => {
     const loadPatientPortalData = async () => {
       try {
-        const stored = localStorage.getItem("shashwat_patient_user");
-        let patientId = "pat-1001";
-        if (stored) {
-          const userObj = JSON.parse(stored);
-          if (userObj.patientId) patientId = userObj.patientId;
+        const res = await fetch("/api/patient/portal");
+        if (res.status === 401) {
+          router.push("/patient/login");
+          return;
         }
 
-        const res = await fetch(`/api/patient/portal?patientId=${patientId}`);
         if (res.ok) {
           const data = await res.json();
           setPatient(data.patient);
           setVisits(data.visits || []);
           setNotes(data.notes || []);
           setReports(data.reports || []);
+        } else {
+          router.push("/patient/login");
         }
       } catch (err) {
         console.error("Patient portal load error:", err);
@@ -57,7 +57,7 @@ export default function PatientDashboardPage() {
       }
     };
     loadPatientPortalData();
-  }, []);
+  }, [router]);
 
   const handleLogout = () => {
     document.cookie = "shashwat_patient_session=; path=/; max-age=0";

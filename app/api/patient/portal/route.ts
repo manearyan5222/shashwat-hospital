@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
+import { getAuthenticatedPatient } from "@/lib/supabase/auth-helper";
 import {
-  getPatientByAuthUserId,
-  getPatientById,
   getVisitsByPatientId,
   getTreatmentNotesByPatientId,
   getPatientReports,
@@ -14,26 +13,26 @@ export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   try {
-    const { searchParams } = new URL(request.url);
-    const authUserId = searchParams.get("authUserId");
-    const patientId = searchParams.get("patientId") || "pat-1001"; // Fallback to sample patient in dev
-
-    let patient = null;
-    if (authUserId) {
-      patient = await getPatientByAuthUserId(authUserId);
-    }
-    if (!patient && patientId) {
-      patient = await getPatientById(patientId);
+    // 1. Mandatory server-side patient session authentication
+    const authSession = await getAuthenticatedPatient(request);
+    if (!authSession) {
+      secureLog("warn", "Unauthorized access attempt to patient portal API");
+      return NextResponse.json(
+        { message: "Authentication required. Please sign in to view your health records." },
+        { status: 401 }
+      );
     }
 
-    if (!patient) {
-      return NextResponse.json({ message: "Patient profile not found" }, { status: 404 });
-    }
+    // 2. Data source of truth is strictly the authenticated patient's profile
+    const patient = authSession.patient;
+    const patientId = patient.id;
 
-    const visits = await getVisitsByPatientId(patient.id);
-    const notes = await getTreatmentNotesByPatientId(patient.id);
-    const reports = await getPatientReports(patient.id);
+    // 3. Retrieve clinical encounters, treatment notes, and medical reports
+    const visits = await getVisitsByPatientId(patientId);
+    const notes = await getTreatmentNotesByPatientId(patientId);
+    const reports = await getPatientReports(patientId);
 
+    // 4. Generate signed report download URLs
     const reportsWithSignedUrls = await Promise.all(
       reports.map(async (r) => {
         const signedUrl = await generateSignedReportUrl(r.file_url);
@@ -44,12 +43,12 @@ export async function GET(request: Request) {
       })
     );
 
-    // Audit log read by patient
+    // 5. Compliance Audit Log
     await logAuditEvent({
-      actorId: authUserId || patient.id,
+      actorId: authSession.userId,
       action: "read_treatment_notes",
       targetTable: "patients",
-      targetId: patient.id,
+      targetId: patientId,
     });
 
     return NextResponse.json({

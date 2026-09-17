@@ -51,6 +51,15 @@ export default function DoctorPatientRecordDetailPage() {
     if (!patientId) return;
     try {
       const res = await fetch(`/api/doctor/patients/${patientId}`);
+      if (res.status === 401) {
+        window.location.href = "/doctor/login";
+        return;
+      }
+      if (res.status === 403) {
+        setPatient(null);
+        setIsLoading(false);
+        return;
+      }
       if (res.ok) {
         const data = await res.json();
         setPatient(data.patient);
