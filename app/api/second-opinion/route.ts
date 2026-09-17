@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { insertSecondOpinion } from "@/lib/supabase/service";
 
 const secondOpinionRateMap = new Map<string, { count: number; timestamp: number }>();
 
@@ -7,7 +8,7 @@ export async function POST(request: Request) {
     const ip = request.headers.get("x-forwarded-for") || "local";
     const now = Date.now();
     const windowMs = 60 * 1000;
-    const maxRequests = 5;
+    const maxRequests = 10;
 
     const rateData = secondOpinionRateMap.get(ip) || { count: 0, timestamp: now };
     if (now - rateData.timestamp < windowMs) {
@@ -32,6 +33,7 @@ export async function POST(request: Request) {
       conditionCategory,
       priorDiagnosis,
       reportsSummary,
+      reportFileUrl,
     } = body;
 
     if (!patientName || typeof patientName !== "string" || patientName.trim().length < 2) {
@@ -50,24 +52,30 @@ export async function POST(request: Request) {
     }
 
     const sanitized = {
-      patientName: patientName.trim().slice(0, 100),
-      patientPhone: cleanedPhone.slice(0, 15),
-      patientEmail: (patientEmail || "").trim().slice(0, 100),
-      conditionCategory: String(conditionCategory || "General").slice(0, 50),
-      priorDiagnosis: (priorDiagnosis || "").trim().slice(0, 300),
-      reportsSummary: (reportsSummary || "").trim().slice(0, 500),
-      submittedAt: new Date().toISOString(),
+      patient_name: patientName.trim().slice(0, 100),
+      patient_phone: cleanedPhone.slice(0, 15),
+      patient_email: (patientEmail || "").trim().slice(0, 100) || null,
+      condition_category: String(conditionCategory || "General").slice(0, 50),
+      prior_diagnosis: (priorDiagnosis || "").trim().slice(0, 300) || null,
+      reports_summary: (reportsSummary || "").trim().slice(0, 500) || null,
+      report_file_url: reportFileUrl ? String(reportFileUrl).slice(0, 500) : null,
+      status: "new" as const,
+      staff_notes: null,
     };
+
+    const savedRecord = await insertSecondOpinion(sanitized);
 
     return NextResponse.json(
       {
         success: true,
         message: "Your second opinion request has been received. Our clinical coordinator will contact you.",
-        referenceId: `SO-${Date.now().toString().slice(-6)}`,
+        referenceId: `SO-${savedRecord.id.slice(-6).toUpperCase()}`,
+        id: savedRecord.id,
       },
       { status: 200 }
     );
-  } catch {
+  } catch (error) {
+    console.error("Second opinion submission error:", error);
     return NextResponse.json(
       { message: "Unable to submit second opinion request." },
       { status: 500 }

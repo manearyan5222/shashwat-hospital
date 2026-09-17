@@ -1,11 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Manrope } from "next/font/google";
 import "./globals.css";
-import { Header } from "@/components/Header";
-import { Footer } from "@/components/Footer";
-import { MobileActionBar } from "@/components/MobileActionBar";
-import { HospitalJsonLd } from "@/components/JsonLd";
-import { hospitalData } from "@/data/hospital";
+import { SiteLayoutWrapper } from "@/components/SiteLayoutWrapper";
 import { SITE_URL } from "@/lib/site";
 
 const inter = Inter({
@@ -77,11 +73,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} ${manrope.variable}`}>
       <body className="min-h-screen flex flex-col antialiased bg-surface-bg text-surface-text">
-        <HospitalJsonLd />
-        <Header />
-        <main className="flex-1">{children}</main>
-        <Footer />
-        <MobileActionBar />
+        <SiteLayoutWrapper>{children}</SiteLayoutWrapper>
       </body>
     </html>
   );
