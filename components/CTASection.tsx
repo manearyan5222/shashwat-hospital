@@ -2,6 +2,7 @@ import React from "react";
 import Link from "next/link";
 import { Calendar, PhoneCall, Shield, ArrowRight } from "lucide-react";
 import { hospitalData } from "@/data/hospital";
+import { isVerified } from "@/lib/verify";
 import { Container } from "./Container";
 
 interface CTASectionProps {
@@ -21,6 +22,8 @@ export function CTASection({
   secondaryButtonText = "Find a Specialist",
   secondaryButtonHref = "/doctors",
 }: CTASectionProps) {
+  const hasPhone = isVerified(hospitalData.contact.primaryPhone);
+
   return (
     <section className="py-14 sm:py-18 bg-gradient-to-br from-navy-950 via-navy-900 to-teal-950 text-white relative overflow-hidden rounded-3xl my-8">
       <div className="absolute inset-0 opacity-10 pointer-events-none bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:20px_20px]" />
@@ -57,13 +60,15 @@ export function CTASection({
               <ArrowRight className="w-4 h-4" />
             </Link>
 
-            <a
-              href={`tel:${hospitalData.contact.primaryPhone}`}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl text-slate-300 hover:text-white text-xs font-medium"
-            >
-              <PhoneCall className="w-3.5 h-3.5 text-teal-400" />
-              <span>Call: {hospitalData.contact.primaryPhone}</span>
-            </a>
+            {hasPhone && (
+              <a
+                href={`tel:${hospitalData.contact.primaryPhone}`}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl text-slate-300 hover:text-white text-xs font-medium"
+              >
+                <PhoneCall className="w-3.5 h-3.5 text-teal-400" />
+                <span>Call: {hospitalData.contact.displayPhone || hospitalData.contact.primaryPhone}</span>
+              </a>
+            )}
           </div>
         </div>
       </Container>
