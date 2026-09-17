@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { DoctorLayout } from "@/components/doctor/DoctorLayout";
@@ -47,7 +47,7 @@ export default function DoctorPatientRecordDetailPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
 
-  const fetchRecord = async () => {
+  const fetchRecord = useCallback(async () => {
     if (!patientId) return;
     try {
       const res = await fetch(`/api/doctor/patients/${patientId}`);
@@ -75,11 +75,11 @@ export default function DoctorPatientRecordDetailPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [patientId]);
 
   useEffect(() => {
     fetchRecord();
-  }, [patientId]);
+  }, [fetchRecord]);
 
   const handleCreateNote = async (e: React.FormEvent) => {
     e.preventDefault();

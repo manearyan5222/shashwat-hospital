@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
   AppointmentRecord,
   SecondOpinionRecord,
@@ -72,7 +72,7 @@ export function AdminDashboardClient({
   const [selectedDoctorForAssign, setSelectedDoctorForAssign] = useState<string>("");
   const [selectedPatientForAssign, setSelectedPatientForAssign] = useState<string>("");
 
-  const fetchData = async (isAutoPoll = false) => {
+  const fetchData = useCallback(async (isAutoPoll = false) => {
     try {
       const [aptRes, soRes] = await Promise.all([
         fetch("/api/admin/appointments"),
@@ -82,11 +82,17 @@ export function AdminDashboardClient({
       if (aptRes.ok) {
         const aptJson = await aptRes.json();
         const incomingApts = aptJson.data || [];
-        if (isAutoPoll && incomingApts.length > appointments.length) {
-          setNewArrivalToast(`🔔 New patient request received! (${incomingApts.length - appointments.length} new)`);
-          setTimeout(() => setNewArrivalToast(null), 5000);
+        if (isAutoPoll) {
+          setAppointments((prev) => {
+            if (incomingApts.length > prev.length) {
+              setNewArrivalToast(`🔔 New patient request received! (${incomingApts.length - prev.length} new)`);
+              setTimeout(() => setNewArrivalToast(null), 5000);
+            }
+            return incomingApts;
+          });
+        } else {
+          setAppointments(incomingApts);
         }
-        setAppointments(incomingApts);
       }
 
       if (soRes.ok) {
@@ -108,7 +114,7 @@ export function AdminDashboardClient({
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  };
+  }, [userRole]);
 
   useEffect(() => {
     fetchData();
@@ -119,7 +125,7 @@ export function AdminDashboardClient({
     }, 30000);
 
     return () => clearInterval(interval);
-  }, [userRole]);
+  }, [fetchData]);
 
   const handleRefresh = () => {
     setIsRefreshing(true);
@@ -154,7 +160,7 @@ export function AdminDashboardClient({
   }, [appointments, secondOpinions]);
 
   // Date filtering helper
-  const isDateWithinRange = (dateStr: string) => {
+  const isDateWithinRange = useCallback((dateStr: string) => {
     if (dateRangeFilter === "all") return true;
     const itemDate = new Date(dateStr);
     const now = new Date();
@@ -165,7 +171,7 @@ export function AdminDashboardClient({
     if (dateRangeFilter === "week") return diffHours <= 24 * 7;
     if (dateRangeFilter === "month") return diffHours <= 24 * 30;
     return true;
-  };
+  }, [dateRangeFilter]);
 
   // Filtered Appointments
   const filteredAppointments = useMemo(() => {
@@ -181,7 +187,7 @@ export function AdminDashboardClient({
 
       return matchesStatus && matchesDept && matchesSearch && matchesDate;
     });
-  }, [appointments, statusFilter, departmentFilter, searchQuery, dateRangeFilter]);
+  }, [appointments, statusFilter, departmentFilter, searchQuery, isDateWithinRange]);
 
   // Filtered Second Opinions
   const filteredSecondOpinions = useMemo(() => {
@@ -197,7 +203,7 @@ export function AdminDashboardClient({
 
       return matchesStatus && matchesSearch && matchesDate;
     });
-  }, [secondOpinions, statusFilter, searchQuery, dateRangeFilter]);
+  }, [secondOpinions, statusFilter, searchQuery, isDateWithinRange]);
 
   // Status update callback from Slide-Over
   const handleUpdateStatus = async (
