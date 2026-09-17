@@ -57,50 +57,49 @@ export async function POST(request: Request) {
           name: patient.full_name,
         },
       });
-    } else {
-      // Dev / offline mode: Strict check against pre-registered hospital patient records
-      const matched = memoryPatients.find(
-        (p) => (isPhone && p.phone === cleanedDigits) || p.email?.toLowerCase() === cleanIdentifier.toLowerCase()
-      );
-
-      if (!matched || password.length < 6) {
-        return NextResponse.json(
-          {
-            message:
-              "Invalid credentials or unregistered patient. In development, use registered patient phone (9820123456) with password (PatientPass2026!).",
-          },
-          { status: 401 }
-        );
-      }
-
-      const response = NextResponse.json({
-        success: true,
-        patient: {
-          id: matched.id,
-          name: matched.full_name,
-        },
-      });
-
-      // Set cookie tied strictly to this matched patient
-      response.cookies.set({
-        name: "shashwat_patient_session",
-        value: "authenticated",
-        path: "/",
-        maxAge: 60 * 60 * 24 * 7,
-        sameSite: "lax",
-        httpOnly: true,
-      });
-
-      response.cookies.set({
-        name: "shashwat_patient_user",
-        value: encodeURIComponent(JSON.stringify({ patientId: matched.id, phone: matched.phone })),
-        path: "/",
-        maxAge: 60 * 60 * 24 * 7,
-        sameSite: "lax",
-      });
-
-      return response;
     }
+
+    // Dev / offline mode: Strict password comparison against pre-registered hospital patient records
+    const matched = memoryPatients.find(
+      (p) => (isPhone && p.phone === cleanedDigits) || p.email?.toLowerCase() === cleanIdentifier.toLowerCase()
+    );
+
+    if (!matched || !matched.devPassword || password !== matched.devPassword) {
+      return NextResponse.json(
+        {
+          message: "Invalid credentials. Please verify your registered login details.",
+        },
+        { status: 401 }
+      );
+    }
+
+    const response = NextResponse.json({
+      success: true,
+      patient: {
+        id: matched.id,
+        name: matched.full_name,
+      },
+    });
+
+    // Set cookie tied strictly to this matched patient
+    response.cookies.set({
+      name: "shashwat_patient_session",
+      value: "authenticated",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 7,
+      sameSite: "lax",
+      httpOnly: true,
+    });
+
+    response.cookies.set({
+      name: "shashwat_patient_user",
+      value: encodeURIComponent(JSON.stringify({ patientId: matched.id, phone: matched.phone })),
+      path: "/",
+      maxAge: 60 * 60 * 24 * 7,
+      sameSite: "lax",
+    });
+
+    return response;
   } catch (error) {
     secureLog("error", "Patient login error", error);
     return NextResponse.json({ message: "An unexpected error occurred during login." }, { status: 500 });

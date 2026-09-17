@@ -42,6 +42,7 @@ export interface PatientRecord {
   date_of_birth?: string | null;
   gender?: string | null;
   auth_user_id?: string | null;
+  devPassword?: string;
   created_at: string;
 }
 

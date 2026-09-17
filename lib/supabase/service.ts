@@ -56,6 +56,7 @@ export const memoryPatients: PatientRecord[] = [
     date_of_birth: "1968-04-12",
     gender: "Male",
     auth_user_id: "patient-user-1001",
+    devPassword: "PatientPass2026!",
     created_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 30).toISOString(),
   },
   {
@@ -66,6 +67,7 @@ export const memoryPatients: PatientRecord[] = [
     date_of_birth: "1994-08-22",
     gender: "Female",
     auth_user_id: "patient-user-1002",
+    devPassword: "SnehaPatient2026!",
     created_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 10).toISOString(),
   },
   {
@@ -76,6 +78,7 @@ export const memoryPatients: PatientRecord[] = [
     date_of_birth: "1982-11-05",
     gender: "Male",
     auth_user_id: "patient-user-1003",
+    devPassword: "VijayPatient2026!",
     created_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5).toISOString(),
   },
 ];
