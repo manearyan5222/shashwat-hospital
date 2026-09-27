@@ -204,14 +204,23 @@ export function Footer() {
         </div>
 
         {/* Bottom copyright & legal links */}
-        <div className="mt-8 pt-6 border-t border-navy-900 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-400">
+        <div className="mt-8 pt-6 border-t border-navy-900 flex flex-col lg:flex-row items-center justify-between gap-4 text-xs text-slate-400">
           <p>{hospitalData.legal.copyrightText}</p>
-          <div className="flex items-center gap-6">
+          <div className="flex flex-wrap items-center justify-center gap-y-2 gap-x-5">
             <Link href="/privacy-policy" className="hover:text-teal-300 transition-colors">
               Privacy Policy
             </Link>
             <Link href="/terms" className="hover:text-teal-300 transition-colors">
               Terms & Medical Disclaimer
+            </Link>
+            <Link href="/patient-rights" className="hover:text-teal-300 transition-colors">
+              Patient Rights
+            </Link>
+            <Link href="/refund-policy" className="hover:text-teal-300 transition-colors">
+              Refund Policy
+            </Link>
+            <Link href="/grievance-redressal" className="hover:text-teal-300 transition-colors">
+              Grievance Officer
             </Link>
             <Link href="/contact" className="hover:text-teal-300 transition-colors">
               Contact Us
