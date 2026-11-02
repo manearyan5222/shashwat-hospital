@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { NavLink, useNavigate, useLocation } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { isDemoMode } from '../services/demoStore';
 
 export default function Navbar() {
   const { state, logout } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
   const { user, isAuthenticated } = state;
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -26,6 +26,11 @@ export default function Navbar() {
             <div className="brand-name">CampusConnect</div>
           </div>
           <span className="brand-tag">Spring + React</span>
+          {isDemoMode() && (
+            <span className="demo-mode-badge" title="Self-contained demo mode: zero backend or tunnel dependencies">
+              Demo Mode
+            </span>
+          )}
         </NavLink>
 
         {/* Collapsible Hamburger Toggle Button */}
@@ -100,12 +105,18 @@ export default function Navbar() {
                   onClick={handleLogout}
                   className="btn btn-secondary btn-sm"
                   title="Log Out of your account"
+                  style={{ whiteSpace: 'nowrap' }}
                 >
                   Logout
                 </button>
               </div>
             ) : (
-              <NavLink to="/login" onClick={closeMenu} className="btn btn-primary btn-sm btn-signin">
+              <NavLink 
+                to="/login" 
+                onClick={closeMenu} 
+                className="btn btn-primary btn-sm btn-signin"
+                style={{ whiteSpace: 'nowrap', flexShrink: 0 }}
+              >
                 Sign In
               </NavLink>
             )}

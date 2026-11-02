@@ -492,7 +492,7 @@ export default function DashboardPage() {
                 }}
               >
                 <div style={{ fontWeight: 700, color: '#92400e' }}>
-                  🏛️ Legacy Servlets &amp; JSP
+                  🏛️ Legacy Servlets &amp; JSP (Local demo only)
                 </div>
                 <span
                   style={{
@@ -504,7 +504,7 @@ export default function DashboardPage() {
                     fontWeight: 600,
                   }}
                 >
-                  Local Port 8085
+                  Local demo only
                 </span>
               </div>
               <p style={{ fontSize: '0.82rem', color: '#475569', marginBottom: '0.75rem' }}>

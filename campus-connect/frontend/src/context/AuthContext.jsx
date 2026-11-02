@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
+import { isDemoMode, simulateDemoLogin, simulateDemoRegister } from '../services/demoStore';
 
 /**
  * ============================================================================
@@ -124,6 +125,42 @@ export function AuthProvider({ children }) {
   // FLUX ACTION CREATORS (Helper methods that dispatch actions)
   const login = async (username, password) => {
     dispatch({ type: ACTION_TYPES.AUTH_START });
+
+    // Handle Simulated In-Memory Authentication for Demo Mode
+    if (isDemoMode()) {
+      try {
+        // Short delay for realistic UI response
+        await new Promise(res => setTimeout(res, 40));
+        const data = simulateDemoLogin(username, password);
+
+        const userData = {
+          id: data.id,
+          username: data.username,
+          email: data.email,
+          fullName: data.fullName,
+          role: data.role,
+          studentProfileId: data.studentProfileId,
+        };
+
+        localStorage.setItem('cc_token', data.token);
+        localStorage.setItem('cc_user', JSON.stringify(userData));
+
+        dispatch({
+          type: ACTION_TYPES.LOGIN_SUCCESS,
+          payload: { user: userData, token: data.token },
+        });
+
+        return { success: true };
+      } catch (err) {
+        dispatch({
+          type: ACTION_TYPES.AUTH_FAILURE,
+          payload: err.message,
+        });
+        return { success: false, error: err.message };
+      }
+    }
+
+    // Real Backend Login Flow
     try {
       const response = await fetch(`${API_AUTH_BASE}/login`, {
         method: 'POST',
@@ -168,6 +205,41 @@ export function AuthProvider({ children }) {
 
   const register = async (registerData) => {
     dispatch({ type: ACTION_TYPES.AUTH_START });
+
+    // Handle Simulated In-Memory Registration for Demo Mode
+    if (isDemoMode()) {
+      try {
+        await new Promise(res => setTimeout(res, 40));
+        const data = simulateDemoRegister(registerData);
+
+        const userData = {
+          id: data.id,
+          username: data.username,
+          email: data.email,
+          fullName: data.fullName,
+          role: data.role,
+          studentProfileId: data.studentProfileId,
+        };
+
+        localStorage.setItem('cc_token', data.token);
+        localStorage.setItem('cc_user', JSON.stringify(userData));
+
+        dispatch({
+          type: ACTION_TYPES.LOGIN_SUCCESS,
+          payload: { user: userData, token: data.token },
+        });
+
+        return { success: true };
+      } catch (err) {
+        dispatch({
+          type: ACTION_TYPES.AUTH_FAILURE,
+          payload: err.message,
+        });
+        return { success: false, error: err.message };
+      }
+    }
+
+    // Real Backend Register Flow
     try {
       const response = await fetch(`${API_AUTH_BASE}/register`, {
         method: 'POST',

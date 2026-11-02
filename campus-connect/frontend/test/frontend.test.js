@@ -147,3 +147,82 @@ test('Dashboard Logic: empty state detection triggers when campus records are em
   assert.equal(hasMetrics({ totalStudents: 6, totalCourses: 4, totalOpportunities: 4 }), true);
 });
 
+// 5. Test Demo Store Baseline Metrics & In-Memory CRUD
+test('Demo Store: baseline metrics match all dashboard specifications', async () => {
+  const {
+    getDemoDashboardSummary,
+    getDemoDepartmentAnalytics,
+    resetDemoStore,
+    simulateDemoLogin,
+  } = await import('../src/services/demoStore.js');
+
+  resetDemoStore();
+  const summary = getDemoDashboardSummary();
+
+  assert.equal(summary.totalStudents, 6);
+  assert.equal(summary.totalCourses, 4);
+  assert.equal(summary.activeEnrollments, 5);
+  assert.equal(summary.totalOpportunities, 4);
+  assert.equal(summary.openOpportunities, 3);
+  assert.equal(summary.totalApplications, 6);
+  assert.equal(summary.placedStudents, 1);
+  assert.equal(summary.placementRatePercentage, 16.67);
+  assert.equal(summary.studentsByDepartment['Computer Science'], 3);
+  assert.equal(summary.studentsByDepartment['Information Technology'], 2);
+  assert.equal(summary.studentsByDepartment['Electronics & Comm'], 1);
+
+  // Department analytics report
+  const analytics = getDemoDepartmentAnalytics();
+  assert.equal(analytics.length, 3);
+  assert.equal(analytics[0].department, 'Computer Science');
+
+  // Simulated login for admin, faculty, student
+  const adminRes = simulateDemoLogin('admin', 'Admin@Campus2026!');
+  assert.equal(adminRes.role, 'ADMIN');
+  assert.ok(adminRes.token.startsWith('demo-token-admin'));
+
+  const facultyRes = simulateDemoLogin('faculty', 'Faculty@Campus2026!');
+  assert.equal(facultyRes.role, 'FACULTY');
+
+  const studentRes = simulateDemoLogin('student', 'Student@Campus2026!');
+  assert.equal(studentRes.role, 'STUDENT');
+  assert.equal(studentRes.studentProfileId, 1);
+});
+
+test('Demo Store: in-memory CRUD operations mutate session data', async () => {
+  const {
+    getDemoStudents,
+    createDemoStudent,
+    deleteDemoStudent,
+    getDemoDashboardSummary,
+    resetDemoStore,
+  } = await import('../src/services/demoStore.js');
+
+  resetDemoStore();
+  const initial = getDemoStudents();
+  assert.equal(initial.totalElements, 6);
+
+  // Create
+  const created = createDemoStudent({
+    firstName: 'Demo',
+    lastName: 'User',
+    email: 'demo.user@campusconnect.edu',
+    department: 'Computer Science',
+    academicYear: 3,
+    gpa: 3.75,
+  });
+  assert.equal(created.fullName, 'Demo User');
+
+  const afterAdd = getDemoStudents();
+  assert.equal(afterAdd.totalElements, 7);
+
+  const summary = getDemoDashboardSummary();
+  assert.equal(summary.totalStudents, 7);
+
+  // Delete
+  deleteDemoStudent(created.id);
+  const afterDelete = getDemoStudents();
+  assert.equal(afterDelete.totalElements, 6);
+});
+
+
