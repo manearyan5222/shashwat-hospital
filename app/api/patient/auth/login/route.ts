@@ -59,7 +59,15 @@ export async function POST(request: Request) {
       });
     }
 
-    // Dev / offline mode: Strict password comparison against pre-registered hospital patient records
+    // Dev / offline mode: Fail closed in production if Supabase is not configured
+    if (process.env.NODE_ENV === "production" && process.env.ALLOW_DEV_FALLBACK !== "true") {
+      return NextResponse.json(
+        { message: "Authentication service is unavailable in production. Supabase is not configured." },
+        { status: 503 }
+      );
+    }
+
+    // Strict password comparison against pre-registered hospital patient records
     const matched = memoryPatients.find(
       (p) => (isPhone && p.phone === cleanedDigits) || p.email?.toLowerCase() === cleanIdentifier.toLowerCase()
     );

@@ -49,16 +49,9 @@ function AdminLoginForm() {
           return;
         }
       } else {
-        // Fallback staff authentication for preview / local development mode
-        if (email.trim() && password.length >= 4) {
-          // Set cookie for middleware access
-          document.cookie = `shashwat_staff_session=authenticated; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
-          localStorage.setItem("shashwat_staff_user", JSON.stringify({ email: email.trim() }));
-          router.push(redirectTarget);
-          return;
-        } else {
-          setErrorMessage("Please enter your staff email and password.");
-        }
+        setErrorMessage("Authentication service is unavailable. Supabase is not configured.");
+        setIsLoading(false);
+        return;
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Authentication failed.";
@@ -66,11 +59,6 @@ function AdminLoginForm() {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const fillDemoStaff = () => {
-    setEmail("staff@shashwathospital.com");
-    setPassword("HospitalStaff2026!");
   };
 
   return (
@@ -162,18 +150,11 @@ function AdminLoginForm() {
             </button>
           </form>
 
-          {/* Quick Demo Credentials helper */}
-          <div className="pt-4 border-t border-slate-700/60 text-center space-y-2">
+          {/* Security Notice */}
+          <div className="pt-4 border-t border-slate-700/60 text-center">
             <p className="text-[11px] text-slate-400">
-              Staff accounts are created in the Supabase Dashboard.
+              Hospital Internal System • Authorized Personnel Authentication Only
             </p>
-            <button
-              type="button"
-              onClick={fillDemoStaff}
-              className="text-xs font-semibold text-teal-400 hover:text-teal-300 hover:underline"
-            >
-              Fill Sample Staff Credentials
-            </button>
           </div>
         </div>
       </div>

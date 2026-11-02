@@ -18,6 +18,12 @@ export function HospitalJsonLd() {
     name: hospitalData.name,
     description: hospitalData.fullDescription,
     url: SITE_URL,
+    priceRange: "$$",
+    isAcceptingNewPatients: true,
+    areaServed: {
+      "@type": "AdministrativeArea",
+      name: "Nerul, Navi Mumbai, Maharashtra, India",
+    },
     address: {
       "@type": "PostalAddress",
       streetAddress: hasVerifiedAddress
@@ -30,6 +36,22 @@ export function HospitalJsonLd() {
         : undefined,
       addressCountry: "IN",
     },
+    openingHoursSpecification: [
+      {
+        "@type": "OpeningHoursSpecification",
+        dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+        opens: "09:00",
+        closes: "20:00",
+        description: "Outpatient Department (OPD) Consultations",
+      },
+      {
+        "@type": "OpeningHoursSpecification",
+        dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+        opens: "00:00",
+        closes: "23:59",
+        description: "24/7 Emergency & Acute Trauma Admissions",
+      },
+    ],
     medicalSpecialty: [
       "Orthopedics",
       "Surgical",
@@ -42,26 +64,64 @@ export function HospitalJsonLd() {
       {
         "@type": "MedicalProcedure",
         name: "Total Knee Replacement",
+        procedureType: "SurgicalProcedure",
       },
       {
         "@type": "MedicalProcedure",
         name: "Total Hip Replacement",
+        procedureType: "SurgicalProcedure",
       },
       {
         "@type": "MedicalProcedure",
         name: "Arthroscopic ACL Reconstruction",
+        procedureType: "SurgicalProcedure",
       },
       {
         "@type": "MedicalProcedure",
         name: "Spine Microdiscectomy",
+        procedureType: "SurgicalProcedure",
+      },
+      {
+        "@type": "MedicalProcedure",
+        name: "Custom Foot Orthotics & Biomechanics Analysis",
+        procedureType: "NoninvasiveProcedure",
       },
       {
         "@type": "MedicalProcedure",
         name: "Orthopaedic Trauma & Fracture Fixation",
+        procedureType: "SurgicalProcedure",
       },
       {
         "@type": "MedicalProcedure",
-        name: "Physiotherapy & Rehabilitation",
+        name: "Physiotherapy & Musculoskeletal Rehabilitation",
+        procedureType: "NoninvasiveProcedure",
+      },
+    ],
+    department: [
+      {
+        "@type": "MedicalClinic",
+        name: "Centre for Joint Replacement",
+        medicalSpecialty: "JointReplacement",
+      },
+      {
+        "@type": "MedicalClinic",
+        name: "Sports Medicine & Arthroscopy Unit",
+        medicalSpecialty: "SportsMedicine",
+      },
+      {
+        "@type": "MedicalClinic",
+        name: "Spine Care & Disc Interventions",
+        medicalSpecialty: "SpineSurgery",
+      },
+      {
+        "@type": "MedicalClinic",
+        name: "Foot & Ankle Orthopaedic Centre",
+        medicalSpecialty: "Orthopedics",
+      },
+      {
+        "@type": "MedicalClinic",
+        name: "24/7 Trauma & Fracture Care Service",
+        medicalSpecialty: "Orthopedics",
       },
     ],
   };
@@ -104,6 +164,141 @@ export function FAQJsonLd({ faqs }: { faqs: { question: string; answer: string }
       },
     })),
   };
+
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+    />
+  );
+}
+
+export function BreadcrumbJsonLd({ items }: { items: { name: string; item: string }[] }) {
+  const schema = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: items.map((it, idx) => ({
+      "@type": "ListItem",
+      position: idx + 1,
+      name: it.name,
+      item: it.item.startsWith("http") ? it.item : `${SITE_URL}${it.item}`,
+    })),
+  };
+
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+    />
+  );
+}
+
+export function MedicalProcedureJsonLd({
+  name,
+  description,
+  procedureType = "SurgicalProcedure",
+  bodyLocation,
+  url,
+}: {
+  name: string;
+  description: string;
+  procedureType?: string;
+  bodyLocation?: string;
+  url?: string;
+}) {
+  const schema: Record<string, unknown> = {
+    "@context": "https://schema.org",
+    "@type": "MedicalProcedure",
+    name,
+    description,
+    procedureType,
+    url: url ? (url.startsWith("http") ? url : `${SITE_URL}${url}`) : undefined,
+    hospitalAffiliation: {
+      "@type": "Hospital",
+      name: hospitalData.name,
+      url: SITE_URL,
+    },
+  };
+
+  if (bodyLocation) {
+    schema.bodyLocation = bodyLocation;
+  }
+
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+    />
+  );
+}
+
+export function MedicalConditionJsonLd({
+  name,
+  description,
+  possibleTreatment,
+  url,
+}: {
+  name: string;
+  description: string;
+  possibleTreatment?: string[];
+  url?: string;
+}) {
+  const schema: Record<string, unknown> = {
+    "@context": "https://schema.org",
+    "@type": "MedicalCondition",
+    name,
+    description,
+    url: url ? (url.startsWith("http") ? url : `${SITE_URL}${url}`) : undefined,
+  };
+
+  if (possibleTreatment && possibleTreatment.length > 0) {
+    schema.possibleTreatment = possibleTreatment.map((t) => ({
+      "@type": "MedicalTherapy",
+      name: t,
+    }));
+  }
+
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+    />
+  );
+}
+
+export function PhysicianJsonLd({
+  name,
+  designation,
+  medicalSpecialty,
+  description,
+  url,
+  registrationNumber,
+}: {
+  name: string;
+  designation: string;
+  medicalSpecialty: string;
+  description?: string;
+  url?: string;
+  registrationNumber?: string;
+}) {
+  const schema: Record<string, unknown> = {
+    "@context": "https://schema.org",
+    "@type": "Physician",
+    name,
+    jobTitle: designation,
+    medicalSpecialty,
+    description,
+    url: url ? (url.startsWith("http") ? url : `${SITE_URL}${url}`) : undefined,
+    hospitalAffiliation: {
+      "@type": "Hospital",
+      name: hospitalData.name,
+      url: SITE_URL,
+    },
+  };
+
+  if (isVerified(registrationNumber)) {
+    schema.identifier = registrationNumber;
+  }
 
   return (
     <script

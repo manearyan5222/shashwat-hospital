@@ -24,10 +24,26 @@ yarn-debug.log*
 yarn-error.log*
 
 # local env files
+.env
 .env*.local
+.env.production
 
 # vercel
 .vercel
+**/.vercel/
+
+# java / maven
+**/target/
+target/
+*.class
+*.jar
+*.war
+**/tomcat.*/
+tomcat.*/
+
+# frontend builds
+**/dist/
+dist/
 
 # typescript
 *.tsbuildinfo

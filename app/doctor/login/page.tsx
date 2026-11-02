@@ -40,15 +40,9 @@ function DoctorLoginForm() {
           return;
         }
       } else {
-        // Fallback doctor session for development / preview mode
-        if (email.trim() && password.length >= 4) {
-          document.cookie = `shashwat_doctor_session=authenticated; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
-          localStorage.setItem("shashwat_doctor_user", JSON.stringify({ email: email.trim(), id: "doc-joint-1", name: "Dr. Senior Joint Specialist" }));
-          router.push(redirectTarget);
-          return;
-        } else {
-          setErrorMessage("Please enter your doctor email and password.");
-        }
+        setErrorMessage("Authentication service is unavailable. Supabase is not configured.");
+        setIsLoading(false);
+        return;
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Authentication failed.";
@@ -56,11 +50,6 @@ function DoctorLoginForm() {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const fillSampleDoctor = () => {
-    setEmail("dr.joint@shashwathospital.com");
-    setPassword("DoctorPass2026!");
   };
 
   return (
@@ -150,14 +139,11 @@ function DoctorLoginForm() {
             </button>
           </form>
 
-          <div className="pt-4 border-t border-slate-800 text-center space-y-2">
-            <button
-              type="button"
-              onClick={fillSampleDoctor}
-              className="text-xs font-semibold text-cyan-400 hover:text-cyan-300 hover:underline"
-            >
-              Fill Sample Doctor Credentials
-            </button>
+          {/* Security Notice */}
+          <div className="pt-4 border-t border-slate-800 text-center">
+            <p className="text-[11px] text-slate-400">
+              Clinical Workspace • Verified Medical Practitioners Only
+            </p>
           </div>
         </div>
       </div>

@@ -125,9 +125,16 @@ export async function POST(request: Request) {
     );
   } catch (error) {
     secureLog("error", "Appointment submission error", error);
+    const msg = error instanceof Error ? error.message : "An unexpected error occurred while processing your request.";
+    const isServiceUnavailable = msg.includes("Production database") || msg.includes("not configured");
     return NextResponse.json(
-      { message: "An unexpected error occurred while processing your request." },
-      { status: 500 }
+      {
+        success: false,
+        message: isServiceUnavailable
+          ? "Appointment scheduling service is temporarily unavailable. Please call the hospital appointment desk directly."
+          : "An unexpected error occurred while processing your request. Please call the hospital directly.",
+      },
+      { status: isServiceUnavailable ? 503 : 500 }
     );
   }
 }

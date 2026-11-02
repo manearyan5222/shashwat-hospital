@@ -11,6 +11,7 @@ import {
   getServiceSupabase,
   getPatientByAuthUserId,
   getStaffRole,
+  isDevFallbackAllowed,
   memoryPatients,
   memoryDoctorPatientAccess,
   memoryStaffRoles,
@@ -68,6 +69,10 @@ export async function getAuthenticatedPatient(request?: Request): Promise<Authen
   }
 
   // 2. Development / Fallback mode session check (strictly against pre-registered patients)
+  if (!isDevFallbackAllowed()) {
+    // Fail closed: Never allow mock cookies when fallback is not permitted
+    return null;
+  }
   const patientCookie = cookieStore.get("shashwat_patient_session")?.value;
   if (patientCookie === "authenticated") {
     const rawUserCookie = cookieStore.get("shashwat_patient_user")?.value;
@@ -124,6 +129,10 @@ export async function getAuthenticatedDoctor(request?: Request): Promise<Authent
   }
 
   // 2. Development / Fallback mode check
+  if (!isDevFallbackAllowed()) {
+    // Fail closed: Never allow mock cookies when fallback is not permitted
+    return null;
+  }
   const doctorCookie = cookieStore.get("shashwat_doctor_session")?.value;
   if (doctorCookie === "authenticated") {
     const rawUserCookie = cookieStore.get("shashwat_doctor_user")?.value;
@@ -185,6 +194,10 @@ export async function getAuthenticatedStaff(
   }
 
   // 2. Development / Fallback mode check
+  if (!isDevFallbackAllowed()) {
+    // Fail closed: Never allow mock cookies when fallback is not permitted
+    return null;
+  }
   const staffCookie = cookieStore.get("shashwat_staff_session")?.value;
   if (staffCookie === "authenticated") {
     const rawUserCookie = cookieStore.get("shashwat_staff_user")?.value;

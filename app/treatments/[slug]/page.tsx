@@ -15,7 +15,7 @@ import { TreatmentJourney } from "@/components/TreatmentJourney";
 import { FAQAccordion } from "@/components/FAQAccordion";
 import { DoctorCard } from "@/components/DoctorCard";
 import { CTASection } from "@/components/CTASection";
-import { FAQJsonLd } from "@/components/JsonLd";
+import { FAQJsonLd, MedicalProcedureJsonLd } from "@/components/JsonLd";
 import {
   Calendar,
   Stethoscope,
@@ -75,6 +75,11 @@ export default function TreatmentDetailPage({
 
   return (
     <div className="py-8 space-y-16">
+      <MedicalProcedureJsonLd
+        name={treatment.title}
+        description={treatment.shortDescription}
+        url={`/treatments/${treatment.slug}`}
+      />
       <FAQJsonLd faqs={treatment.faqs} />
 
       <Container>

@@ -42,6 +42,7 @@ export function AppointmentWizard({
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [referenceId, setReferenceId] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
 
   const [formData, setFormData] = useState({
@@ -134,15 +135,16 @@ export function AppointmentWizard({
         body: JSON.stringify(formData),
       });
 
-      if (response.ok) {
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setReferenceId(data.referenceId || `SH-${(data.id || "").slice(0, 8).toUpperCase()}`);
         setIsSubmitted(true);
       } else {
-        const data = await response.json();
         setErrorMessage(data.message || "Unable to submit request. Please call the hospital directly.");
       }
     } catch {
-      // Fallback success for static client preview
-      setIsSubmitted(true);
+      setErrorMessage("Network connection error. We were unable to reach the appointment booking service. Please verify your internet connection or call the hospital directly.");
     } finally {
       setIsSubmitting(false);
     }
@@ -156,7 +158,7 @@ export function AppointmentWizard({
         </div>
 
         <span className="text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full bg-teal-50 text-teal-800 border border-teal-200 mb-3 inline-block">
-          Request Received
+          {referenceId ? `Booking Reference: ${referenceId}` : "Request Received"}
         </span>
 
         <h3 className="font-heading font-extrabold text-2xl sm:text-3xl text-navy-950 mb-3">

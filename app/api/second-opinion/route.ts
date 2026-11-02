@@ -97,7 +97,9 @@ export async function POST(request: Request) {
       conditionCategory = body.conditionCategory;
       priorDiagnosis = body.priorDiagnosis;
       reportsSummary = body.reportsSummary;
-      reportFileUrl = body.reportFileUrl || null;
+      // Do not accept or trust client-supplied reportFileUrl in JSON payloads.
+      // Attachments are accepted exclusively through the validated multipart/form-data flow.
+      reportFileUrl = null;
     }
 
     if (!patientName || typeof patientName !== "string" || patientName.trim().length < 2) {

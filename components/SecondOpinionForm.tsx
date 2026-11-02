@@ -59,7 +59,7 @@ export function SecondOpinionForm() {
         setErrorMessage(data.message || "Failed to submit request. Please contact the hospital desk.");
       }
     } catch {
-      setIsSubmitted(true);
+      setErrorMessage("Network error: Unable to submit your second opinion request. Please verify your internet connection or call the hospital directly.");
     } finally {
       setIsSubmitting(false);
     }

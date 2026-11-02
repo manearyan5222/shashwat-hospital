@@ -11,6 +11,7 @@ import { Container } from "@/components/Container";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { SectionHeading } from "@/components/SectionHeading";
 import { CTASection } from "@/components/CTASection";
+import { PhysicianJsonLd } from "@/components/JsonLd";
 import {
   Calendar,
   Phone,
@@ -74,6 +75,14 @@ export default function DoctorProfilePage({
 
   return (
     <div className="py-8 space-y-16">
+      <PhysicianJsonLd
+        name={`${doctor.salutation} ${doctor.name}`}
+        designation={doctor.designation}
+        medicalSpecialty={doctor.departmentName}
+        description={doctor.specializationSummary}
+        url={`/doctors/${doctor.slug}`}
+        registrationNumber={doctor.registrationNumber}
+      />
       <Container>
         <Breadcrumbs
           items={[

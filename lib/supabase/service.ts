@@ -14,7 +14,7 @@ import {
 import { secureLog } from "@/lib/security";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 export const isSupabaseConfigured = (): boolean => {
   return !!(
@@ -23,6 +23,12 @@ export const isSupabaseConfigured = (): boolean => {
     !supabaseUrl.includes("your-project") &&
     supabaseUrl.startsWith("http")
   );
+};
+
+export const isDevFallbackAllowed = (): boolean => {
+  if (isSupabaseConfigured()) return false;
+  if (process.env.NODE_ENV !== "production") return true;
+  return process.env.ALLOW_DEV_FALLBACK === "true";
 };
 
 export function getServiceSupabase() {
@@ -284,7 +290,14 @@ export async function insertAppointment(record: Omit<AppointmentRecord, "id" | "
     if (!error && data) {
       return data as AppointmentRecord;
     }
-    console.error("Supabase insert error, falling back to memory:", error);
+    console.error("Supabase insert error:", error);
+    if (!isDevFallbackAllowed()) {
+      throw new Error(`Production database error inserting appointment: ${error?.message || "Unknown error"}`);
+    }
+  }
+
+  if (!isDevFallbackAllowed()) {
+    throw new Error("Cannot save appointment: Production database (Supabase) is not configured.");
   }
 
   const fallbackRecord: AppointmentRecord = {
@@ -308,7 +321,14 @@ export async function insertSecondOpinion(record: Omit<SecondOpinionRecord, "id"
     if (!error && data) {
       return data as SecondOpinionRecord;
     }
-    console.error("Supabase insert error, falling back to memory:", error);
+    console.error("Supabase insert error:", error);
+    if (!isDevFallbackAllowed()) {
+      throw new Error(`Production database error inserting second opinion: ${error?.message || "Unknown error"}`);
+    }
+  }
+
+  if (!isDevFallbackAllowed()) {
+    throw new Error("Cannot save second opinion: Production database (Supabase) is not configured.");
   }
 
   const fallbackRecord: SecondOpinionRecord = {
@@ -336,6 +356,13 @@ export async function getAppointments(filter?: { status?: string; search?: strin
     if (!error && data) {
       return data as AppointmentRecord[];
     }
+    if (!isDevFallbackAllowed()) {
+      throw new Error(`Production database error fetching appointments: ${error?.message || "Unknown error"}`);
+    }
+  }
+
+  if (!isDevFallbackAllowed()) {
+    throw new Error("Cannot fetch appointments: Production database (Supabase) is not configured.");
   }
 
   return memoryAppointments.filter((item) => {
@@ -365,6 +392,13 @@ export async function getSecondOpinions(filter?: { status?: string; search?: str
     if (!error && data) {
       return data as SecondOpinionRecord[];
     }
+    if (!isDevFallbackAllowed()) {
+      throw new Error(`Production database error fetching second opinions: ${error?.message || "Unknown error"}`);
+    }
+  }
+
+  if (!isDevFallbackAllowed()) {
+    throw new Error("Cannot fetch second opinions: Production database (Supabase) is not configured.");
   }
 
   return memorySecondOpinions.filter((item) => {
@@ -390,6 +424,13 @@ export async function updateAppointmentStatus(id: string, status: RequestStatus,
       .update(updatePayload)
       .eq("id", id);
     if (!error) return true;
+    if (!isDevFallbackAllowed()) {
+      throw new Error(`Production database error updating appointment: ${error?.message || "Unknown error"}`);
+    }
+  }
+
+  if (!isDevFallbackAllowed()) {
+    throw new Error("Cannot update appointment: Production database (Supabase) is not configured.");
   }
 
   const idx = memoryAppointments.findIndex((a) => a.id === id);
@@ -415,6 +456,13 @@ export async function updateSecondOpinionStatus(id: string, status: RequestStatu
       .update(updatePayload)
       .eq("id", id);
     if (!error) return true;
+    if (!isDevFallbackAllowed()) {
+      throw new Error(`Production database error updating second opinion: ${error?.message || "Unknown error"}`);
+    }
+  }
+
+  if (!isDevFallbackAllowed()) {
+    throw new Error("Cannot update second opinion: Production database (Supabase) is not configured.");
   }
 
   const idx = memorySecondOpinions.findIndex((so) => so.id === id);
@@ -446,7 +494,15 @@ export async function getPatients(): Promise<PatientRecord[]> {
   if (supabase) {
     const { data, error } = await supabase.from("patients").select("*").order("created_at", { ascending: false });
     if (!error && data) return data as PatientRecord[];
+    if (!isDevFallbackAllowed()) {
+      throw new Error(`Production database error fetching patients: ${error?.message || "Unknown error"}`);
+    }
   }
+
+  if (!isDevFallbackAllowed()) {
+    throw new Error("Cannot fetch patients: Production database (Supabase) is not configured.");
+  }
+
   return memoryPatients;
 }
 
@@ -455,7 +511,15 @@ export async function getPatientById(id: string): Promise<PatientRecord | null> 
   if (supabase) {
     const { data, error } = await supabase.from("patients").select("*").eq("id", id).single();
     if (!error && data) return data as PatientRecord;
+    if (!isDevFallbackAllowed()) {
+      return null;
+    }
   }
+
+  if (!isDevFallbackAllowed()) {
+    return null;
+  }
+
   return memoryPatients.find((p) => p.id === id) || null;
 }
 
@@ -464,7 +528,15 @@ export async function getPatientByAuthUserId(authUserId: string): Promise<Patien
   if (supabase) {
     const { data, error } = await supabase.from("patients").select("*").eq("auth_user_id", authUserId).single();
     if (!error && data) return data as PatientRecord;
+    if (!isDevFallbackAllowed()) {
+      return null;
+    }
   }
+
+  if (!isDevFallbackAllowed()) {
+    return null;
+  }
+
   return memoryPatients.find((p) => p.auth_user_id === authUserId) || null;
 }
 
@@ -473,7 +545,15 @@ export async function createPatient(patientData: Omit<PatientRecord, "id" | "cre
   if (supabase) {
     const { data, error } = await supabase.from("patients").insert([patientData]).select().single();
     if (!error && data) return data as PatientRecord;
+    if (!isDevFallbackAllowed()) {
+      throw new Error(`Production database error creating patient: ${error?.message || "Unknown error"}`);
+    }
   }
+
+  if (!isDevFallbackAllowed()) {
+    throw new Error("Cannot create patient: Production database (Supabase) is not configured.");
+  }
+
   const newPatient: PatientRecord = {
     ...patientData,
     id: `pat-${Date.now().toString().slice(-6)}`,
@@ -484,6 +564,66 @@ export async function createPatient(patientData: Omit<PatientRecord, "id" | "cre
 }
 
 export async function triageAppointmentToPatient(appointmentId: string, doctorId?: string): Promise<{ patient: PatientRecord; appointment: AppointmentRecord }> {
+  const supabase = getServiceSupabase();
+  if (supabase) {
+    const { data: apt, error: aptErr } = await supabase
+      .from("appointments")
+      .select("*")
+      .eq("id", appointmentId)
+      .single();
+
+    if (aptErr || !apt) throw new Error("Appointment not found");
+
+    let patientRecord: PatientRecord;
+    const { data: existingPat } = await supabase
+      .from("patients")
+      .select("*")
+      .eq("phone", apt.patient_phone)
+      .maybeSingle();
+
+    if (existingPat) {
+      patientRecord = existingPat as PatientRecord;
+    } else {
+      const { data: newPat, error: patErr } = await supabase
+        .from("patients")
+        .insert([{
+          full_name: apt.patient_name,
+          phone: apt.patient_phone,
+          email: apt.patient_email || null,
+          gender: null,
+          date_of_birth: null,
+          auth_user_id: null,
+        }])
+        .select()
+        .single();
+
+      if (patErr || !newPat) throw new Error("Failed to create patient from appointment");
+      patientRecord = newPat as PatientRecord;
+    }
+
+    const { data: updatedApt, error: updateErr } = await supabase
+      .from("appointments")
+      .update({
+        patient_id: patientRecord.id,
+        status: "confirmed",
+      })
+      .eq("id", appointmentId)
+      .select()
+      .single();
+
+    if (updateErr || !updatedApt) throw new Error("Failed to update appointment with triaged patient");
+
+    if (doctorId) {
+      await assignDoctorPatientAccess(doctorId, patientRecord.id);
+    }
+
+    return { patient: patientRecord, appointment: updatedApt as AppointmentRecord };
+  }
+
+  if (!isDevFallbackAllowed()) {
+    throw new Error("Cannot triage appointment: Production database (Supabase) is not configured.");
+  }
+
   const apt = memoryAppointments.find((a) => a.id === appointmentId);
   if (!apt) throw new Error("Appointment not found");
 
@@ -515,12 +655,37 @@ export async function triageAppointmentToPatient(appointmentId: string, doctorId
 // Visits & Append-Only Treatment Notes
 // ---------------------------------------------------------------------------
 
+export async function getVisitById(visitId: string): Promise<VisitRecord | null> {
+  const supabase = getServiceSupabase();
+  if (supabase) {
+    const { data, error } = await supabase.from("visits").select("*").eq("id", visitId).single();
+    if (!error && data) return data as VisitRecord;
+    if (!isDevFallbackAllowed()) {
+      return null;
+    }
+  }
+
+  if (!isDevFallbackAllowed()) {
+    return null;
+  }
+
+  return memoryVisits.find((v) => v.id === visitId) || null;
+}
+
 export async function getVisitsByPatientId(patientId: string): Promise<VisitRecord[]> {
   const supabase = getServiceSupabase();
   if (supabase) {
     const { data, error } = await supabase.from("visits").select("*").eq("patient_id", patientId).order("visit_date", { ascending: false });
     if (!error && data) return data as VisitRecord[];
+    if (!isDevFallbackAllowed()) {
+      throw new Error(`Production database error fetching visits: ${error?.message || "Unknown error"}`);
+    }
   }
+
+  if (!isDevFallbackAllowed()) {
+    throw new Error("Cannot fetch visits: Production database (Supabase) is not configured.");
+  }
+
   return memoryVisits.filter((v) => v.patient_id === patientId);
 }
 
@@ -529,7 +694,15 @@ export async function createVisit(visitData: Omit<VisitRecord, "id" | "created_a
   if (supabase) {
     const { data, error } = await supabase.from("visits").insert([visitData]).select().single();
     if (!error && data) return data as VisitRecord;
+    if (!isDevFallbackAllowed()) {
+      throw new Error(`Production database error creating visit: ${error?.message || "Unknown error"}`);
+    }
   }
+
+  if (!isDevFallbackAllowed()) {
+    throw new Error("Cannot create visit: Production database (Supabase) is not configured.");
+  }
+
   const newVisit: VisitRecord = {
     ...visitData,
     id: `vis-${Date.now().toString().slice(-6)}`,
@@ -544,11 +717,39 @@ export async function getTreatmentNotesByVisitId(visitId: string): Promise<Treat
   if (supabase) {
     const { data, error } = await supabase.from("treatment_notes").select("*").eq("visit_id", visitId).order("created_at", { ascending: true });
     if (!error && data) return data as TreatmentNoteRecord[];
+    if (!isDevFallbackAllowed()) {
+      throw new Error(`Production database error fetching treatment notes: ${error?.message || "Unknown error"}`);
+    }
   }
+
+  if (!isDevFallbackAllowed()) {
+    throw new Error("Cannot fetch treatment notes: Production database (Supabase) is not configured.");
+  }
+
   return memoryTreatmentNotes.filter((n) => n.visit_id === visitId);
 }
 
 export async function getTreatmentNotesByPatientId(patientId: string): Promise<TreatmentNoteRecord[]> {
+  const supabase = getServiceSupabase();
+  if (supabase) {
+    const patientVisits = await getVisitsByPatientId(patientId);
+    const visitIds = patientVisits.map((v) => v.id);
+    if (visitIds.length === 0) return [];
+    const { data, error } = await supabase
+      .from("treatment_notes")
+      .select("*")
+      .in("visit_id", visitIds)
+      .order("created_at", { ascending: true });
+    if (!error && data) return data as TreatmentNoteRecord[];
+    if (!isDevFallbackAllowed()) {
+      throw new Error(`Production database error fetching treatment notes: ${error?.message || "Unknown error"}`);
+    }
+  }
+
+  if (!isDevFallbackAllowed()) {
+    throw new Error("Cannot fetch treatment notes: Production database (Supabase) is not configured.");
+  }
+
   const patientVisits = await getVisitsByPatientId(patientId);
   const visitIds = new Set(patientVisits.map((v) => v.id));
   return memoryTreatmentNotes.filter((n) => visitIds.has(n.visit_id));
@@ -566,7 +767,15 @@ export async function createTreatmentNote(noteData: Omit<TreatmentNoteRecord, "i
       .select()
       .single();
     if (!error && data) return data as TreatmentNoteRecord;
+    if (!isDevFallbackAllowed()) {
+      throw new Error(`Production database error creating treatment note: ${error?.message || "Unknown error"}`);
+    }
   }
+
+  if (!isDevFallbackAllowed()) {
+    throw new Error("Cannot create treatment note: Production database (Supabase) is not configured.");
+  }
+
   const newNote: TreatmentNoteRecord = {
     ...noteData,
     id: `not-${Date.now().toString().slice(-6)}`,
@@ -603,7 +812,15 @@ export async function createTreatmentAmendment(
       .select()
       .single();
     if (!error && data) return data as TreatmentNoteRecord;
+    if (!isDevFallbackAllowed()) {
+      throw new Error(`Production database error amending treatment note: ${error?.message || "Unknown error"}`);
+    }
   }
+
+  if (!isDevFallbackAllowed()) {
+    throw new Error("Cannot amend treatment note: Production database (Supabase) is not configured.");
+  }
+
   const newAmendment: TreatmentNoteRecord = {
     id: `not-${Date.now().toString().slice(-6)}`,
     visit_id: visitId,
@@ -627,7 +844,15 @@ export async function getPatientReports(patientId: string): Promise<PatientRepor
   if (supabase) {
     const { data, error } = await supabase.from("patient_reports").select("*").eq("patient_id", patientId).order("uploaded_at", { ascending: false });
     if (!error && data) return data as PatientReportRecord[];
+    if (!isDevFallbackAllowed()) {
+      throw new Error(`Production database error fetching patient reports: ${error?.message || "Unknown error"}`);
+    }
   }
+
+  if (!isDevFallbackAllowed()) {
+    throw new Error("Cannot fetch patient reports: Production database (Supabase) is not configured.");
+  }
+
   return memoryPatientReports.filter((r) => r.patient_id === patientId);
 }
 
@@ -653,7 +878,15 @@ export async function getStaffRole(userId: string): Promise<StaffRole | null> {
   if (supabase) {
     const { data, error } = await supabase.from("staff_roles").select("role").eq("user_id", userId).single();
     if (!error && data) return data.role as StaffRole;
+    if (!isDevFallbackAllowed()) {
+      return null;
+    }
   }
+
+  if (!isDevFallbackAllowed()) {
+    return null;
+  }
+
   const match = memoryStaffRoles.find((s) => s.user_id === userId);
   return match ? match.role : null;
 }
@@ -663,7 +896,15 @@ export async function getStaffList(): Promise<StaffRoleRecord[]> {
   if (supabase) {
     const { data, error } = await supabase.from("staff_roles").select("*").order("full_name");
     if (!error && data) return data as StaffRoleRecord[];
+    if (!isDevFallbackAllowed()) {
+      throw new Error(`Production database error fetching staff list: ${error?.message || "Unknown error"}`);
+    }
   }
+
+  if (!isDevFallbackAllowed()) {
+    throw new Error("Cannot fetch staff list: Production database (Supabase) is not configured.");
+  }
+
   return memoryStaffRoles;
 }
 
@@ -682,6 +923,13 @@ export async function getAssignedPatientsForDoctor(doctorId: string): Promise<Pa
     if (!error && data) {
       return data.map((d: { patients: unknown }) => d.patients) as PatientRecord[];
     }
+    if (!isDevFallbackAllowed()) {
+      throw new Error(`Production database error fetching assigned patients: ${error?.message || "Unknown error"}`);
+    }
+  }
+
+  if (!isDevFallbackAllowed()) {
+    throw new Error("Cannot fetch assigned patients: Production database (Supabase) is not configured.");
   }
 
   const accessList = memoryDoctorPatientAccess.filter((a) => a.doctor_id === doctorId);
@@ -696,6 +944,13 @@ export async function assignDoctorPatientAccess(doctorId: string, patientId: str
       { doctor_id: doctorId, patient_id: patientId, granted_by: grantedBy || null },
     ]);
     if (!error) return true;
+    if (!isDevFallbackAllowed()) {
+      throw new Error(`Production database error assigning doctor access: ${error?.message || "Unknown error"}`);
+    }
+  }
+
+  if (!isDevFallbackAllowed()) {
+    throw new Error("Cannot assign doctor access: Production database (Supabase) is not configured.");
   }
 
   const exists = memoryDoctorPatientAccess.some((a) => a.doctor_id === doctorId && a.patient_id === patientId);
@@ -719,6 +974,13 @@ export async function revokeDoctorPatientAccess(doctorId: string, patientId: str
   if (supabase) {
     const { error } = await supabase.from("doctor_patient_access").delete().eq("doctor_id", doctorId).eq("patient_id", patientId);
     if (!error) return true;
+    if (!isDevFallbackAllowed()) {
+      throw new Error(`Production database error revoking doctor access: ${error?.message || "Unknown error"}`);
+    }
+  }
+
+  if (!isDevFallbackAllowed()) {
+    throw new Error("Cannot revoke doctor access: Production database (Supabase) is not configured.");
   }
 
   const idx = memoryDoctorPatientAccess.findIndex((a) => a.doctor_id === doctorId && a.patient_id === patientId);

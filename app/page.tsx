@@ -1,5 +1,6 @@
-import React from "react";
-import Image from "next/image";
+"use client";
+
+import React, { useState } from "react";
 import Link from "next/link";
 import { Container } from "@/components/Container";
 import { SectionHeading } from "@/components/SectionHeading";
@@ -19,6 +20,16 @@ import { LocationCard } from "@/components/LocationCard";
 import { CTASection } from "@/components/CTASection";
 import { FAQJsonLd } from "@/components/JsonLd";
 
+import { TaraHospitalHero } from "@/components/TaraHospitalHero";
+import { TaraDualCare } from "@/components/TaraDualCare";
+import { FootPainZoneInteractive } from "@/components/FootPainZoneInteractive";
+import { CustomOrthoticsAnalyzer } from "@/components/CustomOrthoticsAnalyzer";
+import { JointRecoveryCalculator } from "@/components/JointRecoveryCalculator";
+import { SurgicalTechCustomizer } from "@/components/SurgicalTechCustomizer";
+import { HospitalSecuritySection } from "@/components/HospitalSecuritySection";
+import { HospitalComparisonTable } from "@/components/HospitalComparisonTable";
+import { QuickAppointmentModal } from "@/components/QuickAppointmentModal";
+
 import { hospitalData } from "@/data/hospital";
 import { departmentsData } from "@/data/departments";
 import { doctorsData } from "@/data/doctors";
@@ -37,34 +48,34 @@ import {
   RotateCw,
   Footprints,
   HeartPulse,
-  Calendar,
-  Stethoscope,
-  Phone,
-  ShieldCheck,
-  Building,
-  Clock,
   ArrowRight,
+  Stethoscope,
 } from "lucide-react";
 
-// Section B: 8 Concern Cards
+// Concern Cards
 const concernItems = [
   { icon: Bone, label: "Knee Pain", href: "/conditions/knee-pain" },
+  { icon: Footprints, label: "Foot & Heel Pain", href: "/foot-and-ankle" },
   { icon: Activity, label: "Joint Pain", href: "/conditions/osteoarthritis" },
   { icon: AlignVerticalJustifyCenter, label: "Back & Spine", href: "/conditions/back-pain" },
   { icon: Zap, label: "Sports Injury", href: "/conditions/sports-injury" },
   { icon: ShieldAlert, label: "Fracture & Trauma", href: "/emergency" },
   { icon: RotateCw, label: "Shoulder Problems", href: "/conditions/shoulder-pain" },
-  { icon: Footprints, label: "Mobility Issues", href: "/conditions/knee-pain" },
-  { icon: HeartPulse, label: "Recovery & Rehabilitation", href: "/rehabilitation" },
+  { icon: HeartPulse, label: "Recovery & Rehab", href: "/rehabilitation" },
 ];
 
 export default function HomePage() {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const handleOpenBooking = () => setIsModalOpen(true);
+  const handleCloseBooking = () => setIsModalOpen(false);
+
   const featuredTreatments = treatmentsData.slice(0, 4);
   const featuredDoctors = doctorsData.slice(0, 3);
   const featuredFacilities = facilitiesData.slice(0, 3);
   const homeFaqs = faqsData.slice(0, 6);
 
-  // 6-step universal clinical journey
+  // Universal Care Journey
   const universalJourney = [
     {
       stepNumber: 1,
@@ -108,103 +119,34 @@ export default function HomePage() {
     <>
       <FAQJsonLd faqs={homeFaqs} />
 
-      {/* SECTION A: HERO SECTION (55% / 45% Asymmetric Desktop Split) */}
-      <section className="relative pt-10 pb-16 lg:pt-16 lg:pb-24 bg-[#F8FAFC] overflow-hidden">
-        <Container>
-          <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-10">
-            {/* Left Column: 55% width on desktop */}
-            <div className="w-full lg:w-[55%] text-left space-y-0 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-4 motion-safe:duration-500">
-              {/* Eyebrow Label */}
-              <p className="text-[14px] font-medium tracking-[0.02em] text-[#0E7490] mb-4">
-                Shashwat Hospital · Nerul
-              </p>
+      {/* TARA & GOOGLE STITCH INSPIRED HERO SECTION */}
+      <TaraHospitalHero onOpenBooking={handleOpenBooking} />
 
-              {/* H1 Heading */}
-              <h1 className="font-heading text-[36px] sm:text-[48px] lg:text-[56px] font-bold text-[#0B2545] leading-[1.1] max-w-[14ch] mb-5">
-                Move Better. Live Better.
-              </h1>
-
-              {/* Subhead */}
-              <p className="text-[16px] sm:text-[18px] font-normal text-[#64748B] leading-[1.6] max-w-[480px] mb-8">
-                Patient-focused orthopaedic and surgical care designed around your journey — from consultation and treatment to recovery.
-              </p>
-
-              {/* CTA Row */}
-              <div className="flex flex-wrap items-center gap-3.5">
-                {/* Primary CTA */}
-                <Link
-                  href="/appointment"
-                  className="inline-flex items-center justify-center px-[28px] py-[14px] rounded-[8px] bg-[#0B2545] text-[#FFFFFF] text-sm font-semibold hover:bg-[#07192f] transition-all shadow-sm active:scale-95"
-                >
-                  Book an Appointment
-                </Link>
-
-                {/* Secondary CTA */}
-                <Link
-                  href="/doctors"
-                  className="inline-flex items-center justify-center px-[28px] py-[14px] rounded-[8px] bg-transparent text-[#0B2545] text-sm font-semibold border-[1.5px] border-[#0B2545] hover:bg-[#0B2545]/[0.06] transition-all active:scale-95"
-                >
-                  Find a Doctor
-                </Link>
-
-                {/* Tertiary / Emergency CTA */}
-                <Link
-                  href="/emergency"
-                  className="inline-flex items-center justify-center px-[28px] py-[14px] rounded-[8px] bg-[#DC2626] text-[#FFFFFF] text-sm font-semibold hover:bg-red-700 transition-all shadow-sm active:scale-95"
-                >
-                  Emergency Care
-                </Link>
-              </div>
-            </div>
-
-            {/* Right Column: 45% width on desktop */}
-            <div className="w-full lg:w-[45%] motion-safe:animate-in motion-safe:fade-in motion-safe:duration-500 motion-safe:delay-100">
-              <div className="relative aspect-[16/9] lg:aspect-[4/5] w-full rounded-[16px] border border-[#E2E8F0] overflow-hidden shadow-card bg-gradient-to-br from-slate-100 to-teal-50/50 flex flex-col justify-end p-6">
-                <Image
-                  src="https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&w=1000&q=80"
-                  alt="Shashwat Hospital Orthopaedic Consultation"
-                  fill
-                  priority
-                  sizes="(max-width: 768px) 100vw, 45vw"
-                  className="object-cover object-top"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#0B2545]/85 via-[#0B2545]/20 to-transparent" />
-
-                {/* Subtle verified overlay panel */}
-                <div className="relative z-10 text-white space-y-1">
-                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[6px] bg-teal-900/80 backdrop-blur-sm border border-teal-500/30 text-teal-200 text-xs font-semibold">
-                    <ShieldCheck className="w-3.5 h-3.5 text-teal-400" />
-                    <span>Orthopaedic Centre of Excellence</span>
-                  </div>
-                  <p className="text-xs text-slate-200 pt-0.5">
-                    {hospitalData.location.locality}, {hospitalData.location.city}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </Container>
-      </section>
-
-      {/* EMERGENCY STRIP (Sticky on desktop, hidden on mobile per C.4) */}
+      {/* EMERGENCY STRIP */}
       <EmergencyBanner />
 
       {/* QUICK ACTIONS SECTION */}
-      <section className="py-8 sm:py-12 bg-white border-b border-[#E2E8F0]">
+      <section className="py-8 sm:py-12 bg-[#0F172A] border-b border-white/10">
         <Container>
           <QuickActionGrid />
         </Container>
       </section>
 
-      {/* SECTION B: "WHAT BRINGS YOU HERE?" (8 Concern Cards, 4-col desktop, 2-col tablet, 1-col mobile) */}
-      <section className="py-16 sm:py-20 bg-[#F8FAFC]">
+      {/* TARA DUAL-CARE ARCHITECTURE */}
+      <TaraDualCare onOpenBooking={handleOpenBooking} />
+
+      {/* MISSISSAUGA FOOT CLINIC INSPIRED INTERACTIVE PAIN ZONE CHECKER */}
+      <FootPainZoneInteractive onOpenBooking={handleOpenBooking} />
+
+      {/* WHAT BRINGS YOU HERE? */}
+      <section className="py-16 sm:py-20 bg-[#0B132B]">
         <Container>
           <div className="mb-8 md:mb-10 text-left">
-            <h2 className="text-[32px] sm:text-[40px] font-bold text-[#0B2545] leading-tight">
+            <h2 className="text-[32px] sm:text-[40px] font-extrabold text-white leading-tight">
               What brings you here?
             </h2>
-            <p className="mt-2 text-[16px] text-[#64748B]">
-              Tell us what&apos;s bothering you — we&apos;ll point you to the right information and the right specialist.
+            <p className="mt-2 text-[16px] text-slate-400">
+              Tell us what&apos;s bothering you — we&apos;ll point you to the right information and specialist.
             </p>
           </div>
 
@@ -221,19 +163,25 @@ export default function HomePage() {
         </Container>
       </section>
 
+      {/* 3D CUSTOM ORTHOTICS & GAIT ANALYZER */}
+      <CustomOrthoticsAnalyzer onOpenBooking={handleOpenBooking} />
+
+      {/* ACCELERATED JOINT MOBILITY & RECOVERY CALCULATOR */}
+      <JointRecoveryCalculator onOpenBooking={handleOpenBooking} />
+
       {/* ORTHOPAEDIC SPECIALTIES */}
-      <section className="py-16 sm:py-20 bg-white border-y border-[#E2E8F0]">
+      <section className="py-16 sm:py-20 bg-[#0B172A] border-y border-white/10">
         <Container>
           <div className="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-4">
             <SectionHeading
               badge="Clinical Excellence"
               title="Orthopaedic Care Across Every Stage of Recovery"
               subtitle="From minimally invasive arthroscopic preservation to advanced joint replacement and complex fracture trauma care."
-              className="mb-0"
+              className="mb-0 text-white"
             />
             <Link
               href="/orthopaedics"
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-[#0E7490] hover:text-[#0B2545] shrink-0"
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-teal-400 hover:text-white shrink-0"
             >
               <span>View All Subspecialties</span>
               <ArrowRight className="w-4 h-4" />
@@ -244,48 +192,48 @@ export default function HomePage() {
             {departmentsData.map((dept) => (
               <div
                 key={dept.id}
-                className="p-6 rounded-[10px] bg-white border border-[#E2E8F0] hover:border-[#0E7490]/50 shadow-card hover:shadow-hover transition-all duration-200 flex flex-col justify-between"
+                className="p-6 rounded-3xl glass-panel border border-white/10 hover:border-teal-500/40 shadow-card hover:shadow-hover transition-all duration-200 flex flex-col justify-between"
               >
                 <div>
-                  <div className="w-10 h-10 rounded-[8px] bg-teal-50 text-[#0E7490] flex items-center justify-center font-bold mb-4 border border-teal-200/50">
+                  <div className="w-10 h-10 rounded-xl bg-teal-500/10 text-teal-400 flex items-center justify-center font-bold mb-4 border border-teal-500/30">
                     <Activity className="w-5 h-5" />
                   </div>
 
-                  <h3 className="font-heading font-bold text-lg text-[#0B2545] mb-2">
+                  <h3 className="font-heading font-bold text-lg text-white mb-2">
                     {dept.title}
                   </h3>
 
-                  <p className="text-xs sm:text-sm text-[#64748B] leading-relaxed mb-4">
+                  <p className="text-xs sm:text-sm text-slate-300 leading-relaxed mb-4">
                     {dept.shortDescription}
                   </p>
 
-                  <div className="space-y-1 pt-2 border-t border-slate-100 text-xs text-slate-700">
-                    <span className="text-[11px] font-semibold text-slate-500 block">
-                      Common Focus:
+                  <div className="space-y-1 pt-2 border-t border-white/10 text-xs text-slate-300">
+                    <span className="text-[11px] font-semibold text-slate-400 block uppercase">
+                      Key Focus:
                     </span>
                     {dept.keyConditions.slice(0, 2).map((c, i) => (
-                      <div key={i} className="flex items-center gap-1.5 text-xs text-slate-600">
-                        <span className="w-1 h-1 rounded-full bg-[#0E7490]" />
+                      <div key={i} className="flex items-center gap-1.5 text-xs text-slate-300">
+                        <span className="w-1.5 h-1.5 rounded-full bg-teal-400" />
                         <span>{c}</span>
                       </div>
                     ))}
                   </div>
                 </div>
 
-                <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between text-xs">
+                <div className="pt-4 mt-4 border-t border-white/10 flex items-center justify-between text-xs">
                   <Link
                     href={`/treatments`}
-                    className="font-bold text-[#0B2545] hover:text-[#0E7490] inline-flex items-center gap-1"
+                    className="font-bold text-white hover:text-teal-400 inline-flex items-center gap-1"
                   >
                     <span>Treatments</span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </Link>
-                  <Link
-                    href={`/appointment?department=${dept.id}`}
-                    className="text-[#0E7490] font-semibold hover:underline"
+                  <button
+                    onClick={handleOpenBooking}
+                    className="text-teal-400 font-bold hover:underline"
                   >
                     Book OPD
-                  </Link>
+                  </button>
                 </div>
               </div>
             ))}
@@ -293,19 +241,22 @@ export default function HomePage() {
         </Container>
       </section>
 
+      {/* SURGICAL TECHNOLOGY & IMPLANT CUSTOMIZER */}
+      <SurgicalTechCustomizer onOpenBooking={handleOpenBooking} />
+
       {/* FEATURED TREATMENTS */}
-      <section className="py-16 sm:py-20 bg-[#F8FAFC]">
+      <section className="py-16 sm:py-20 bg-[#0B132B]">
         <Container>
           <div className="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-4">
             <SectionHeading
               badge="Evidence-Based Care"
               title="Featured Orthopaedic Treatments"
               subtitle="Precision surgical and therapeutic interventions delivered by experienced orthopaedic consultants."
-              className="mb-0"
+              className="mb-0 text-white"
             />
             <Link
               href="/treatments"
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-[#0E7490] hover:text-[#0B2545] shrink-0"
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-teal-400 hover:text-white shrink-0"
             >
               <span>Explore All Treatments</span>
               <ArrowRight className="w-4 h-4" />
@@ -320,8 +271,14 @@ export default function HomePage() {
         </Container>
       </section>
 
+      {/* HOSPITAL SAFETY & ZERO INFECTION PROTOCOL */}
+      <HospitalSecuritySection />
+
+      {/* HOSPITAL COMPARISON TABLE */}
+      <HospitalComparisonTable />
+
       {/* MEET OUR SPECIALISTS & DOCTOR FINDER */}
-      <section className="py-16 sm:py-24 bg-white border-y border-[#E2E8F0]">
+      <section className="py-16 sm:py-24 bg-[#0F172A] border-y border-white/10">
         <Container>
           <SectionHeading
             badge="Medical Faculty"
@@ -342,7 +299,7 @@ export default function HomePage() {
       </section>
 
       {/* 6-STEP TREATMENT JOURNEY */}
-      <section className="py-16 sm:py-20 bg-[#F8FAFC]">
+      <section className="py-16 sm:py-20 bg-[#0B132B]">
         <Container>
           <SectionHeading
             badge="Patient Pathway"
@@ -356,18 +313,18 @@ export default function HomePage() {
       </section>
 
       {/* FACILITIES & INFRASTRUCTURE */}
-      <section className="py-16 sm:py-20 bg-white border-y border-[#E2E8F0]">
+      <section className="py-16 sm:py-20 bg-[#0F172A] border-y border-white/10">
         <Container>
           <div className="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-4">
             <SectionHeading
               badge="Modern Infrastructure"
               title="Designed Around Patient Comfort & Safety"
               subtitle="Laminar airflow operation theatres, 24/7 trauma intake, digital radiography, and dedicated rehabilitation gym in Nerul."
-              className="mb-0"
+              className="mb-0 text-white"
             />
             <Link
               href="/facilities"
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-[#0E7490] hover:text-[#0B2545] shrink-0"
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-teal-400 hover:text-white shrink-0"
             >
               <span>View All Facilities</span>
               <ArrowRight className="w-4 h-4" />
@@ -386,18 +343,18 @@ export default function HomePage() {
       <RecoveryJourney />
 
       {/* CASE REVIEWS */}
-      <section className="py-16 sm:py-20 bg-[#F8FAFC]">
+      <section className="py-16 sm:py-20 bg-[#0B132B]">
         <Container>
           <div className="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-4">
             <SectionHeading
               badge="Recovery Milestones"
               title="Patient Care Case Studies"
               subtitle="Real-world clinical pathways and functional recovery milestones achieved under our multidisciplinary orthopaedic team."
-              className="mb-0"
+              className="mb-0 text-white"
             />
             <Link
               href="/patient-stories"
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-[#0E7490] hover:text-[#0B2545] shrink-0"
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-teal-400 hover:text-white shrink-0"
             >
               <span>View All Case Studies</span>
               <ArrowRight className="w-4 h-4" />
@@ -413,18 +370,18 @@ export default function HomePage() {
       </section>
 
       {/* HEALTH LIBRARY */}
-      <section className="py-16 sm:py-20 bg-white border-y border-[#E2E8F0]">
+      <section className="py-16 sm:py-20 bg-[#0F172A] border-y border-white/10">
         <Container>
           <div className="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-4">
             <SectionHeading
               badge="Patient Education"
               title="From Our Health & Recovery Library"
               subtitle="Evidence-based articles on joint preservation, spine ergonomics, sports injury rehabilitation, and bone health."
-              className="mb-0"
+              className="mb-0 text-white"
             />
             <Link
               href="/health-library"
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-[#0E7490] hover:text-[#0B2545] shrink-0"
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-teal-400 hover:text-white shrink-0"
             >
               <span>Explore Health Library</span>
               <ArrowRight className="w-4 h-4" />
@@ -440,7 +397,7 @@ export default function HomePage() {
       </section>
 
       {/* FREQUENTLY ASKED QUESTIONS */}
-      <section className="py-16 sm:py-20 bg-[#F8FAFC]">
+      <section className="py-16 sm:py-20 bg-[#0B132B]">
         <Container>
           <SectionHeading
             badge="Patient Guide"
@@ -456,7 +413,7 @@ export default function HomePage() {
       </section>
 
       {/* LOCATION & DIRECTIONS */}
-      <section className="py-16 sm:py-20 bg-white border-y border-[#E2E8F0]">
+      <section className="py-16 sm:py-20 bg-[#0F172A] border-y border-white/10">
         <Container>
           <LocationCard />
         </Container>
@@ -471,6 +428,9 @@ export default function HomePage() {
           primaryButtonHref="/appointment"
         />
       </Container>
+
+      {/* PRIORITY OPD APPOINTMENT MODAL */}
+      <QuickAppointmentModal isOpen={isModalOpen} onClose={handleCloseBooking} />
     </>
   );
 }

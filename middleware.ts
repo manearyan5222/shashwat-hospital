@@ -60,9 +60,14 @@ export async function middleware(request: NextRequest) {
         }
       }
     } else {
-      const staffCookie = request.cookies.get("shashwat_staff_session");
-      if (staffCookie?.value === "authenticated") {
-        isStaffAuthenticated = true;
+      // Fail closed in production unless explicitly permitted for test suite
+      if (process.env.NODE_ENV === "production" && process.env.ALLOW_DEV_FALLBACK !== "true") {
+        isStaffAuthenticated = false;
+      } else {
+        const staffCookie = request.cookies.get("shashwat_staff_session");
+        if (staffCookie?.value === "authenticated") {
+          isStaffAuthenticated = true;
+        }
       }
     }
 
@@ -117,9 +122,14 @@ export async function middleware(request: NextRequest) {
         }
       }
     } else {
-      const doctorCookie = request.cookies.get("shashwat_doctor_session");
-      if (doctorCookie?.value === "authenticated") {
-        isDoctorAuthenticated = true;
+      // Fail closed in production unless explicitly permitted for test suite
+      if (process.env.NODE_ENV === "production" && process.env.ALLOW_DEV_FALLBACK !== "true") {
+        isDoctorAuthenticated = false;
+      } else {
+        const doctorCookie = request.cookies.get("shashwat_doctor_session");
+        if (doctorCookie?.value === "authenticated") {
+          isDoctorAuthenticated = true;
+        }
       }
     }
 
@@ -167,9 +177,14 @@ export async function middleware(request: NextRequest) {
         isPatientAuthenticated = true;
       }
     } else {
-      const patientCookie = request.cookies.get("shashwat_patient_session");
-      if (patientCookie?.value === "authenticated") {
-        isPatientAuthenticated = true;
+      // Fail closed in production unless explicitly permitted for test suite
+      if (process.env.NODE_ENV === "production" && process.env.ALLOW_DEV_FALLBACK !== "true") {
+        isPatientAuthenticated = false;
+      } else {
+        const patientCookie = request.cookies.get("shashwat_patient_session");
+        if (patientCookie?.value === "authenticated") {
+          isPatientAuthenticated = true;
+        }
       }
     }
 

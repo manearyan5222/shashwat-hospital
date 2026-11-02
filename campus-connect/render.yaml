@@ -1,0 +1,29 @@
+# =============================================================================
+# Render Blueprint Specification for CampusConnect
+# Docs: https://render.com/docs/blueprint-spec
+# =============================================================================
+services:
+  # Spring Boot Backend Web Service
+  - type: web
+    name: campusconnect-backend
+    env: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    region: oregon
+    healthCheckPath: /api/health
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: h2
+      - key: CORS_ALLOWED_ORIGINS
+        value: https://*.vercel.app,https://*.tmp.now
+      - key: APP_ADMIN_PASSWORD
+        generateValue: true
+      - key: APP_FACULTY_PASSWORD
+        generateValue: true
+      - key: APP_STUDENT_PASSWORD
+        generateValue: true
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRATION_MS
+        value: 86400000

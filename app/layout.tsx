@@ -19,6 +19,9 @@ const manrope = Manrope({
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
+  alternates: {
+    canonical: "./",
+  },
   title: {
     default: "Shashwat Hospital | Orthopaedic & Surgical Care in Nerul, Navi Mumbai",
     template: "%s | Shashwat Hospital Nerul",

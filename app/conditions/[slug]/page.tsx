@@ -14,7 +14,7 @@ import { SectionHeading } from "@/components/SectionHeading";
 import { FAQAccordion } from "@/components/FAQAccordion";
 import { DoctorCard } from "@/components/DoctorCard";
 import { CTASection } from "@/components/CTASection";
-import { FAQJsonLd } from "@/components/JsonLd";
+import { FAQJsonLd, MedicalConditionJsonLd } from "@/components/JsonLd";
 import {
   Calendar,
   Stethoscope,
@@ -75,6 +75,12 @@ export default function ConditionDetailPage({
 
   return (
     <div className="py-8 space-y-16">
+      <MedicalConditionJsonLd
+        name={condition.title}
+        description={condition.shortDescription}
+        possibleTreatment={condition.treatmentOptions?.map((t) => `${t.category}: ${t.details}`)}
+        url={`/conditions/${condition.slug}`}
+      />
       <FAQJsonLd faqs={condition.faqs} />
 
       <Container>

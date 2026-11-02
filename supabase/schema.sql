@@ -92,7 +92,7 @@ CREATE TABLE IF NOT EXISTS public.visits (
 -- 7. Treatment Notes Table (Strictly Append-Only)
 CREATE TABLE IF NOT EXISTS public.treatment_notes (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    visit_id UUID NOT NULL REFERENCES public.visits(id) ON DELETE CASCADE,
+    visit_id UUID NOT NULL REFERENCES public.visits(id) ON DELETE RESTRICT, -- Protects clinical notes against accidental or cascade deletion
     doctor_id UUID NOT NULL REFERENCES auth.users(id),
     note_text TEXT NOT NULL,
     is_amendment BOOLEAN NOT NULL DEFAULT false,
@@ -141,32 +141,73 @@ CREATE INDEX IF NOT EXISTS idx_visits_patient ON public.visits(patient_id);
 CREATE INDEX IF NOT EXISTS idx_visits_doctor ON public.visits(doctor_id);
 CREATE INDEX IF NOT EXISTS idx_notes_visit ON public.treatment_notes(visit_id);
 CREATE INDEX IF NOT EXISTS idx_reports_patient ON public.patient_reports(patient_id);
+CREATE INDEX IF NOT EXISTS idx_reports_file_url ON public.patient_reports(file_url);
 CREATE INDEX IF NOT EXISTS idx_doctor_access_doc ON public.doctor_patient_access(doctor_id);
 CREATE INDEX IF NOT EXISTS idx_audit_log_created ON public.audit_log(created_at DESC);
 
 -- 12. Helper Functions for Role Resolution in RLS
+-- Defined with explicit SET search_path = '' to prevent search_path hijacking
 CREATE OR REPLACE FUNCTION public.get_auth_staff_role()
-RETURNS staff_role_type AS $$
+RETURNS public.staff_role_type
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = ''
+STABLE
+AS $$
     SELECT role FROM public.staff_roles WHERE user_id = auth.uid();
-$$ LANGUAGE sql SECURITY DEFINER STABLE;
+$$;
 
 CREATE OR REPLACE FUNCTION public.is_staff_admin()
-RETURNS BOOLEAN AS $$
-    SELECT EXISTS (SELECT 1 FROM public.staff_roles WHERE user_id = auth.uid() AND role = 'admin');
-$$ LANGUAGE sql SECURITY DEFINER STABLE;
+RETURNS boolean
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = ''
+STABLE
+AS $$
+    SELECT EXISTS (
+        SELECT 1 FROM public.staff_roles 
+        WHERE user_id = auth.uid() AND role = 'admin'::public.staff_role_type
+    );
+$$;
 
 CREATE OR REPLACE FUNCTION public.is_staff_receptionist_or_admin()
-RETURNS BOOLEAN AS $$
-    SELECT EXISTS (SELECT 1 FROM public.staff_roles WHERE user_id = auth.uid() AND role IN ('admin', 'receptionist'));
-$$ LANGUAGE sql SECURITY DEFINER STABLE;
+RETURNS boolean
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = ''
+STABLE
+AS $$
+    SELECT EXISTS (
+        SELECT 1 FROM public.staff_roles 
+        WHERE user_id = auth.uid() AND role IN ('admin'::public.staff_role_type, 'receptionist'::public.staff_role_type)
+    );
+$$;
 
-CREATE OR REPLACE FUNCTION public.is_doctor_assigned_to_patient(p_id UUID)
-RETURNS BOOLEAN AS $$
+CREATE OR REPLACE FUNCTION public.is_doctor_assigned_to_patient(p_id uuid)
+RETURNS boolean
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = ''
+STABLE
+AS $$
     SELECT EXISTS (
         SELECT 1 FROM public.doctor_patient_access 
         WHERE doctor_id = auth.uid() AND patient_id = p_id
     );
-$$ LANGUAGE sql SECURITY DEFINER STABLE;
+$$;
+
+-- Revoke default public execution privileges on security definer helper functions
+REVOKE EXECUTE ON FUNCTION public.get_auth_staff_role() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.get_auth_staff_role() TO authenticated, service_role;
+
+REVOKE EXECUTE ON FUNCTION public.is_staff_admin() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.is_staff_admin() TO authenticated, service_role;
+
+REVOKE EXECUTE ON FUNCTION public.is_staff_receptionist_or_admin() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.is_staff_receptionist_or_admin() TO authenticated, service_role;
+
+REVOKE EXECUTE ON FUNCTION public.is_doctor_assigned_to_patient(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.is_doctor_assigned_to_patient(uuid) TO authenticated, service_role;
 
 -- 13. Revoke UPDATE and DELETE on treatment_notes (Append-Only Enforcement)
 REVOKE UPDATE, DELETE ON public.treatment_notes FROM PUBLIC, authenticated, anon;
@@ -184,88 +225,124 @@ ALTER TABLE public.doctor_patient_access ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.audit_log ENABLE ROW LEVEL SECURITY;
 
 -- Staff Roles RLS
+DROP POLICY IF EXISTS "Admins can manage staff roles" ON public.staff_roles;
 CREATE POLICY "Admins can manage staff roles" ON public.staff_roles
     FOR ALL TO authenticated
     USING (public.is_staff_admin())
     WITH CHECK (public.is_staff_admin());
 
+DROP POLICY IF EXISTS "Users can read own staff role" ON public.staff_roles;
 CREATE POLICY "Users can read own staff role" ON public.staff_roles
     FOR SELECT TO authenticated
     USING (user_id = auth.uid());
 
 -- Appointments & Second Opinions RLS
+DROP POLICY IF EXISTS "Public can submit appointments" ON public.appointments;
 CREATE POLICY "Public can submit appointments" ON public.appointments
     FOR INSERT TO anon, authenticated
     WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Staff can view appointments" ON public.appointments;
 CREATE POLICY "Staff can view appointments" ON public.appointments
     FOR SELECT TO authenticated
     USING (public.is_staff_receptionist_or_admin());
 
+DROP POLICY IF EXISTS "Staff can update appointments" ON public.appointments;
 CREATE POLICY "Staff can update appointments" ON public.appointments
     FOR UPDATE TO authenticated
     USING (public.is_staff_receptionist_or_admin())
     WITH CHECK (public.is_staff_receptionist_or_admin());
 
+DROP POLICY IF EXISTS "Public can submit second opinions" ON public.second_opinion_requests;
 CREATE POLICY "Public can submit second opinions" ON public.second_opinion_requests
     FOR INSERT TO anon, authenticated
     WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Staff can view second opinions" ON public.second_opinion_requests;
 CREATE POLICY "Staff can view second opinions" ON public.second_opinion_requests
     FOR SELECT TO authenticated
     USING (public.is_staff_receptionist_or_admin());
 
+DROP POLICY IF EXISTS "Staff can update second opinions" ON public.second_opinion_requests;
 CREATE POLICY "Staff can update second opinions" ON public.second_opinion_requests
     FOR UPDATE TO authenticated
     USING (public.is_staff_receptionist_or_admin())
     WITH CHECK (public.is_staff_receptionist_or_admin());
 
 -- Patients RLS
+DROP POLICY IF EXISTS "Admins can manage patients" ON public.patients;
 CREATE POLICY "Admins can manage patients" ON public.patients
     FOR ALL TO authenticated
     USING (public.is_staff_admin())
     WITH CHECK (public.is_staff_admin());
 
+DROP POLICY IF EXISTS "Doctors can view assigned patients" ON public.patients;
 CREATE POLICY "Doctors can view assigned patients" ON public.patients
     FOR SELECT TO authenticated
     USING (public.is_doctor_assigned_to_patient(id));
 
+DROP POLICY IF EXISTS "Patients can view own record" ON public.patients;
 CREATE POLICY "Patients can view own record" ON public.patients
     FOR SELECT TO authenticated
     USING (auth_user_id = auth.uid());
 
 -- Visits RLS
+DROP POLICY IF EXISTS "Admins can manage visits" ON public.visits;
 CREATE POLICY "Admins can manage visits" ON public.visits
     FOR ALL TO authenticated
     USING (public.is_staff_admin())
     WITH CHECK (public.is_staff_admin());
 
-CREATE POLICY "Doctors can manage visits for assigned patients" ON public.visits
-    FOR ALL TO authenticated
+DROP POLICY IF EXISTS "Doctors can manage visits for assigned patients" ON public.visits;
+DROP POLICY IF EXISTS "Doctors can view visits for assigned patients" ON public.visits;
+CREATE POLICY "Doctors can view visits for assigned patients" ON public.visits
+    FOR SELECT TO authenticated
+    USING (doctor_id = auth.uid() OR public.is_doctor_assigned_to_patient(patient_id));
+
+DROP POLICY IF EXISTS "Doctors can insert visits for assigned patients" ON public.visits;
+CREATE POLICY "Doctors can insert visits for assigned patients" ON public.visits
+    FOR INSERT TO authenticated
+    WITH CHECK (doctor_id = auth.uid() AND public.is_doctor_assigned_to_patient(patient_id));
+
+DROP POLICY IF EXISTS "Doctors can update visits for assigned patients" ON public.visits;
+CREATE POLICY "Doctors can update visits for assigned patients" ON public.visits
+    FOR UPDATE TO authenticated
     USING (doctor_id = auth.uid() OR public.is_doctor_assigned_to_patient(patient_id))
     WITH CHECK (doctor_id = auth.uid());
 
+DROP POLICY IF EXISTS "Patients can view own visits" ON public.visits;
 CREATE POLICY "Patients can view own visits" ON public.visits
     FOR SELECT TO authenticated
     USING (EXISTS (SELECT 1 FROM public.patients WHERE patients.id = visits.patient_id AND patients.auth_user_id = auth.uid()));
 
 -- Treatment Notes RLS (INSERT and SELECT only)
+DROP POLICY IF EXISTS "Admins can view treatment notes" ON public.treatment_notes;
 CREATE POLICY "Admins can view treatment notes" ON public.treatment_notes
     FOR SELECT TO authenticated
     USING (public.is_staff_admin());
 
+DROP POLICY IF EXISTS "Doctors can view notes for assigned patients" ON public.treatment_notes;
 CREATE POLICY "Doctors can view notes for assigned patients" ON public.treatment_notes
     FOR SELECT TO authenticated
     USING (EXISTS (
         SELECT 1 FROM public.visits v 
         WHERE v.id = treatment_notes.visit_id 
-        AND public.is_doctor_assigned_to_patient(v.patient_id)
+        AND (v.doctor_id = auth.uid() OR public.is_doctor_assigned_to_patient(v.patient_id))
     ));
 
+DROP POLICY IF EXISTS "Doctors can insert notes" ON public.treatment_notes;
 CREATE POLICY "Doctors can insert notes" ON public.treatment_notes
     FOR INSERT TO authenticated
-    WITH CHECK (doctor_id = auth.uid());
+    WITH CHECK (
+        doctor_id = auth.uid() AND
+        EXISTS (
+            SELECT 1 FROM public.visits v 
+            WHERE v.id = treatment_notes.visit_id 
+            AND (v.doctor_id = auth.uid() OR public.is_doctor_assigned_to_patient(v.patient_id))
+        )
+    );
 
+DROP POLICY IF EXISTS "Patients can view own treatment notes" ON public.treatment_notes;
 CREATE POLICY "Patients can view own treatment notes" ON public.treatment_notes
     FOR SELECT TO authenticated
     USING (EXISTS (
@@ -275,19 +352,23 @@ CREATE POLICY "Patients can view own treatment notes" ON public.treatment_notes
     ));
 
 -- Patient Reports RLS
+DROP POLICY IF EXISTS "Admins can manage reports" ON public.patient_reports;
 CREATE POLICY "Admins can manage reports" ON public.patient_reports
     FOR ALL TO authenticated
     USING (public.is_staff_admin())
     WITH CHECK (public.is_staff_admin());
 
+DROP POLICY IF EXISTS "Doctors can view reports for assigned patients" ON public.patient_reports;
 CREATE POLICY "Doctors can view reports for assigned patients" ON public.patient_reports
     FOR SELECT TO authenticated
     USING (public.is_doctor_assigned_to_patient(patient_id));
 
+DROP POLICY IF EXISTS "Doctors can upload reports for assigned patients" ON public.patient_reports;
 CREATE POLICY "Doctors can upload reports for assigned patients" ON public.patient_reports
     FOR INSERT TO authenticated
     WITH CHECK (public.is_doctor_assigned_to_patient(patient_id));
 
+DROP POLICY IF EXISTS "Patients can view own reports" ON public.patient_reports;
 CREATE POLICY "Patients can view own reports" ON public.patient_reports
     FOR SELECT TO authenticated
     USING (EXISTS (
@@ -295,20 +376,24 @@ CREATE POLICY "Patients can view own reports" ON public.patient_reports
     ));
 
 -- Doctor-Patient Access Junction RLS
+DROP POLICY IF EXISTS "Admins can manage doctor access" ON public.doctor_patient_access;
 CREATE POLICY "Admins can manage doctor access" ON public.doctor_patient_access
     FOR ALL TO authenticated
     USING (public.is_staff_admin())
     WITH CHECK (public.is_staff_admin());
 
+DROP POLICY IF EXISTS "Doctors can view own access grants" ON public.doctor_patient_access;
 CREATE POLICY "Doctors can view own access grants" ON public.doctor_patient_access
     FOR SELECT TO authenticated
     USING (doctor_id = auth.uid());
 
 -- Audit Log RLS (Append-only insert, Admins can view)
+DROP POLICY IF EXISTS "Authenticated users can insert audit logs" ON public.audit_log;
 CREATE POLICY "Authenticated users can insert audit logs" ON public.audit_log
     FOR INSERT TO authenticated
     WITH CHECK (actor_id = auth.uid() OR actor_id IS NULL);
 
+DROP POLICY IF EXISTS "Admins can view audit logs" ON public.audit_log;
 CREATE POLICY "Admins can view audit logs" ON public.audit_log
     FOR SELECT TO authenticated
     USING (public.is_staff_admin());
@@ -319,12 +404,65 @@ VALUES ('second-opinion-reports', 'second-opinion-reports', false),
        ('patient-reports', 'patient-reports', false)
 ON CONFLICT (id) DO NOTHING;
 
--- Storage RLS
-CREATE POLICY "Public can upload intake scans" ON storage.objects
-    FOR INSERT TO anon, authenticated
-    WITH CHECK (bucket_id IN ('second-opinion-reports', 'patient-reports'));
+-- Storage RLS (Strict Least-Privilege & Scoped Authorization)
+-- Note: Anonymous direct uploads to storage are denied. Public second-opinion uploads
+-- are mediated server-side by /api/second-opinion via the service role key with strict MIME & size validation.
 
-CREATE POLICY "Staff and assigned doctors can access scans" ON storage.objects
+DROP POLICY IF EXISTS "Public can upload intake scans" ON storage.objects;
+DROP POLICY IF EXISTS "Staff and assigned doctors can access scans" ON storage.objects;
+DROP POLICY IF EXISTS "Staff can view second opinion reports" ON storage.objects;
+DROP POLICY IF EXISTS "Doctors and staff can upload patient reports" ON storage.objects;
+DROP POLICY IF EXISTS "Admins can view patient reports in storage" ON storage.objects;
+DROP POLICY IF EXISTS "Doctors can view assigned patient reports" ON storage.objects;
+DROP POLICY IF EXISTS "Patients can view own reports in storage" ON storage.objects;
+
+-- 15.1 Second Opinion Storage (Internal Staff Access Only)
+CREATE POLICY "Staff can view second opinion reports" ON storage.objects
     FOR SELECT TO authenticated
-    USING (bucket_id IN ('second-opinion-reports', 'patient-reports'));
+    USING (
+        bucket_id = 'second-opinion-reports' AND
+        public.is_staff_receptionist_or_admin()
+    );
+
+-- 15.2 Patient Diagnostic Reports (Staff Admins & Authorized Doctors Upload)
+CREATE POLICY "Doctors and staff can upload patient reports" ON storage.objects
+    FOR INSERT TO authenticated
+    WITH CHECK (
+        bucket_id = 'patient-reports' AND
+        (public.is_staff_admin() OR public.get_auth_staff_role() = 'doctor')
+    );
+
+-- 15.3 Patient Diagnostic Reports (Admin Read Access)
+CREATE POLICY "Admins can view patient reports in storage" ON storage.objects
+    FOR SELECT TO authenticated
+    USING (
+        bucket_id = 'patient-reports' AND
+        public.is_staff_admin()
+    );
+
+-- 15.4 Patient Diagnostic Reports (Assigned Doctor Read Access)
+CREATE POLICY "Doctors can view assigned patient reports" ON storage.objects
+    FOR SELECT TO authenticated
+    USING (
+        bucket_id = 'patient-reports' AND
+        public.get_auth_staff_role() = 'doctor' AND
+        EXISTS (
+            SELECT 1 FROM public.patient_reports pr
+            WHERE pr.file_url = ('patient-reports/' || storage.objects.name)
+            AND public.is_doctor_assigned_to_patient(pr.patient_id)
+        )
+    );
+
+-- 15.5 Patient Diagnostic Reports (Patient Self-Read Access)
+CREATE POLICY "Patients can view own reports in storage" ON storage.objects
+    FOR SELECT TO authenticated
+    USING (
+        bucket_id = 'patient-reports' AND
+        EXISTS (
+            SELECT 1 FROM public.patient_reports pr
+            JOIN public.patients p ON p.id = pr.patient_id
+            WHERE pr.file_url = ('patient-reports/' || storage.objects.name)
+            AND p.auth_user_id = auth.uid()
+        )
+    );
 
